@@ -1,0 +1,81 @@
+# dot-pi
+
+Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) coding agent.
+
+## Extensions
+
+| Extension                | Description                                                                                                                        | Origin                                                                                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `codesearch.ts`          | Search public GitHub code via [grep.app](https://grep.app) MCP API                                                                 | Original                                                                                                                                         |
+| `confirm-destructive.ts` | Confirm before clearing session or switching with unsaved work                                                                     | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/confirm-destructive.ts)       |
+| `permission-gate.ts`     | Block dangerous bash commands (rm -rf, sudo, git push, etc.)                                                                       | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/permission-gate.ts)           |
+| `question.ts`            | Let the LLM ask user questions with selectable options                                                                             | Simplified version of [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/question.ts)     |
+| `rules.ts`               | Load rule files from `~/.pi/agent/rules/` into system prompt                                                                       | Based on [pi-mono claude-rules example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/claude-rules.ts) |
+| `sandbox/`               | **[WIP]** Sandbox bash commands using [@anthropic-ai/sandbox-runtime](https://www.npmjs.com/package/@anthropic-ai/sandbox-runtime) | Original                                                                                                                                         |
+| `webfetch.ts`            | Fetch URL content and convert to markdown/text/html                                                                                | Original                                                                                                                                         |
+| `websearch.ts`           | Web search via [Exa AI](https://exa.ai) MCP API                                                                                    | Original                                                                                                                                         |
+
+## Skills
+
+| Skill                     | Description                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| `chat-to-skill`           | Convert current chat session into a reusable skill (long-term memory) |
+| `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English)      |
+
+## Rules
+
+| Rule                 | Description                                             |
+| -------------------- | ------------------------------------------------------- |
+| `bun.md`             | Use Bun instead of Node.js/npm                          |
+| `comments.md`        | Comment policy — avoid redundant comments               |
+| `commit-messages.md` | Follow existing repo commit style                       |
+| `delete-files.md`    | Use `rm -f` to delete files                             |
+| `typescript.md`      | TypeScript naming, type safety, imports, async patterns |
+
+## Installation
+
+### Extensions
+
+Copy desired extensions to `~/.pi/agent/extensions/`:
+
+```bash
+cp extensions/codesearch.ts ~/.pi/agent/extensions/
+```
+
+For extensions with dependencies (like `sandbox/`), copy the whole directory and run `npm install`:
+
+```bash
+cp -r extensions/sandbox ~/.pi/agent/extensions/
+cd ~/.pi/agent/extensions/sandbox && npm install
+```
+
+### Skills
+
+Copy desired skills to `~/.pi/agent/skills/`:
+
+```bash
+cp -r skills/chat-to-skill ~/.pi/agent/skills/
+```
+
+### Rules
+
+Copy desired rules to `~/.pi/agent/rules/`:
+
+```bash
+cp rules/typescript.md ~/.pi/agent/rules/
+```
+
+Then add the `rules.ts` extension to load them into the system prompt.
+
+## Development
+
+```bash
+bun install
+bun run check    # TypeScript check
+bun run format   # Format with oxfmt
+bun run lint     # Lint with oxlint
+```
+
+## License
+
+MIT

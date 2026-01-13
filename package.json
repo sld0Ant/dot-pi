@@ -1,0 +1,20 @@
+{
+  "name": "dot-pi",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "format": "oxfmt .",
+    "lint": "oxlint ."
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "^0.34.41",
+    "@types/bun": "latest",
+    "@types/turndown": "^5.0.5",
+    "oxfmt": "^0.24.0",
+    "oxlint": "^1.0.0",
+    "typescript": "^5.7.0"
+  }
+}
