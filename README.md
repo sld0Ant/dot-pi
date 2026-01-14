@@ -19,12 +19,13 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 
 ## Skills
 
-| Skill                     | Description                                                           |
-| ------------------------- | --------------------------------------------------------------------- |
-| `agent-browser`           | Browser automation with [agent-browser](https://github.com/vercel-labs/agent-browser) CLI |
-| `chat-to-skill`           | Convert current chat session into a reusable skill (long-term memory) |
-| `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English)      |
-| `skill-discovery`         | Discover agent skills on GitHub via `gh` CLI                          |
+| Skill                     | Description                                                           | Origin |
+| ------------------------- | --------------------------------------------------------------------- | ------ |
+| `agent-browser`           | Browser automation with [agent-browser](https://github.com/vercel-labs/agent-browser) CLI | Adapted from [agent-browser docs](https://github.com/vercel-labs/agent-browser) |
+| `applescript`             | AppleScript and JXA automation for macOS                              | Adapted from [claude-skills-generator](https://github.com/martinholovsky/claude-skills-generator/tree/main/skills/applescript) |
+| `chat-to-skill`           | Convert current chat session into a reusable skill (long-term memory) | Original |
+| `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English)      | Original |
+| `skill-discovery`         | Discover agent skills on GitHub via `gh` CLI                          | Original |
 
 ## Rules
 
