@@ -6,7 +6,7 @@
  * workspace diagnostics, call hierarchy, and rust-analyzer specific operations.
  */
 
-import { type ExtensionAPI, highlightCode } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, getLanguageFromPath, highlightCode } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import type {
   CallHierarchyIncomingCall,
@@ -1102,13 +1102,13 @@ export default function (pi: ExtensionAPI) {
 
         return {
           content: [{ type: "text", text: output }],
-          details: { serverName, action, success: true },
+          details: { serverName, action, success: true, file: targetFile },
         };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         return {
           content: [{ type: "text", text: `LSP error: ${errorMessage}` }],
-          details: { serverName, action, success: false },
+          details: { serverName, action, success: false, file: resolvedFile },
         };
       }
     },
@@ -1128,7 +1128,7 @@ export default function (pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
 
-    renderResult(result, options, theme) {
+    renderResult(result, { expanded }, theme) {
       const details = result.details as LspToolDetails | undefined;
       const content = result.content?.[0];
 
@@ -1137,7 +1137,6 @@ export default function (pi: ExtensionAPI) {
       }
 
       const text = content.text;
-      const lines = text.split("\n");
 
       if (!details?.success) {
         return new Text(theme.fg("error", text), 0, 0);
@@ -1145,32 +1144,33 @@ export default function (pi: ExtensionAPI) {
 
       const icon = theme.fg("success", "✓");
 
+      // Detect language from file path
+      const fileLang = details.file ? getLanguageFromPath(details.file) : undefined;
+
       // Detect code blocks and apply syntax highlighting
       const formatOutput = (raw: string): string => {
-        // Match ```language ... ``` blocks
-        return raw.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
-          const language = lang || "typescript";
+        // Match ```language ... ``` blocks, use detected lang as fallback
+        return raw.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, blockLang, code) => {
+          const language = blockLang || fileLang || "text";
           const highlighted = highlightCode(code.trim(), language);
           return highlighted.join("\n");
         });
       };
 
+      const lines = text.split("\n");
       const PREVIEW_LINES = 8;
-      const totalLines = lines.length;
-      const truncated = totalLines > PREVIEW_LINES;
 
-      if (!options.expanded && truncated) {
+      if (!expanded && lines.length > PREVIEW_LINES) {
         const preview = lines.slice(0, PREVIEW_LINES).join("\n");
-        const hiddenCount = totalLines - PREVIEW_LINES;
+        const hiddenCount = lines.length - PREVIEW_LINES;
         return new Text(
-          `${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(preview)}\n${theme.fg("dim", `... ${hiddenCount} more lines (ctrl+o to expand)`)}`,
+          `${icon} ${theme.fg("muted", details.action)}\n${formatOutput(preview)}\n${theme.fg("dim", `... ${hiddenCount} more lines`)}`,
           0,
           0,
         );
       }
 
-      const expandHint = truncated ? theme.fg("dim", "\n(ctrl+o to collapse)") : "";
-      return new Text(`${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(text)}${expandHint}`, 0, 0);
+      return new Text(`${icon} ${theme.fg("muted", details.action)}\n${formatOutput(text)}`, 0, 0);
     },
   });
 

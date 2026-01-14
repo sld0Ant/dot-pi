@@ -114,6 +114,7 @@ export interface LspToolDetails {
   serverName?: string;
   action: string;
   success: boolean;
+  file?: string;
 }
 
 // =============================================================================

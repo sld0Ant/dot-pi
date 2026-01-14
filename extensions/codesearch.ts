@@ -300,7 +300,7 @@ export default function (pi: ExtensionAPI) {
       return new Text(text, 0, 0);
     },
 
-    renderResult(result, options, theme) {
+    renderResult(result, { expanded, isPartial }, theme) {
       const details = result.details as CodeSearchDetails | undefined;
 
       if (details?.error) {
@@ -311,7 +311,7 @@ export default function (pi: ExtensionAPI) {
       const results = details?.results ?? [];
 
       if (results.length === 0) {
-        if (options.isPartial) return new Text(theme.fg("muted", "Searching..."), 0, 0);
+        if (isPartial) return new Text(theme.fg("muted", "Searching..."), 0, 0);
         return new Text(theme.fg("muted", "No results found."), 0, 0);
       }
 
@@ -323,7 +323,7 @@ export default function (pi: ExtensionAPI) {
       );
 
       // Determine how many results/snippets to show
-      const maxResults = options.expanded
+      const maxResults = expanded
         ? results.length
         : Math.min(PREVIEW_SNIPPETS, results.length);
 
@@ -346,7 +346,7 @@ export default function (pi: ExtensionAPI) {
         );
 
         // Show snippets (limit in preview mode)
-        const maxSnippets = options.expanded ? r.snippets.length : 1;
+        const maxSnippets = expanded ? r.snippets.length : 1;
         for (let j = 0; j < Math.min(maxSnippets, r.snippets.length); j++) {
           const snippet = r.snippets[j];
           if (!snippet) continue;
@@ -360,28 +360,21 @@ export default function (pi: ExtensionAPI) {
         }
 
         // Show remaining snippets count if collapsed
-        if (!options.expanded && r.snippets.length > 1) {
+        if (!expanded && r.snippets.length > 1) {
           container.addChild(
             new Text(theme.fg("dim", `... ${r.snippets.length - 1} more snippets`), 0, 0),
           );
         }
       }
 
-      // Footer with expand/collapse hint
+      // Footer showing hidden content count
       const hiddenResults = results.length - maxResults;
       const totalSnippets = results.reduce((sum, r) => sum + r.snippets.length, 0);
 
-      if (options.expanded) {
-        if (results.length > PREVIEW_SNIPPETS || totalSnippets > results.length) {
-          container.addChild(new Text(theme.fg("dim", "\n(ctrl+o to collapse)"), 0, 0));
-        }
-      } else if (hiddenResults > 0 || totalSnippets > maxResults) {
+      if (!expanded && (hiddenResults > 0 || totalSnippets > maxResults)) {
         container.addChild(
           new Text(
-            theme.fg(
-              "dim",
-              `\n... ${hiddenResults} more repos, ${totalSnippets - maxResults} more snippets (ctrl+o to expand)`,
-            ),
+            theme.fg("dim", `\n... ${hiddenResults} more repos, ${totalSnippets - maxResults} more snippets`),
             0,
             0,
           ),
