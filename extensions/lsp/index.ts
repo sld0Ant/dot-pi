@@ -6,7 +6,7 @@
  * workspace diagnostics, call hierarchy, and rust-analyzer specific operations.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, highlightCode } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
 import type {
   CallHierarchyIncomingCall,
@@ -1145,18 +1145,28 @@ export default function (pi: ExtensionAPI) {
 
       const icon = theme.fg("success", "✓");
 
+      // Detect code blocks and apply syntax highlighting
+      const formatOutput = (raw: string): string => {
+        // Match ```language ... ``` blocks
+        return raw.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
+          const language = lang || "typescript";
+          const highlighted = highlightCode(code.trim(), language);
+          return highlighted.join("\n");
+        });
+      };
+
       if (!options.expanded) {
         const preview = lines.slice(0, 5).join("\n");
         const truncated = lines.length > 5;
         const moreInfo = truncated ? theme.fg("dim", `\n... ${lines.length - 5} more`) : "";
         return new Text(
-          `${icon} ${theme.fg("muted", details?.action || "")}${moreInfo}\n${preview}`,
+          `${icon} ${theme.fg("muted", details?.action || "")}${moreInfo}\n${formatOutput(preview)}`,
           0,
           0,
         );
       }
 
-      return new Text(`${icon} ${theme.fg("muted", details?.action || "")}\n${text}`, 0, 0);
+      return new Text(`${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(text)}`, 0, 0);
     },
   });
 
