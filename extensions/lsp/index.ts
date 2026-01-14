@@ -1137,7 +1137,7 @@ export default function (pi: ExtensionAPI) {
       }
 
       const text = content.text;
-      const lines = text.split("\n").filter((l) => l.trim());
+      const lines = text.split("\n");
 
       if (!details?.success) {
         return new Text(theme.fg("error", text), 0, 0);
@@ -1155,18 +1155,22 @@ export default function (pi: ExtensionAPI) {
         });
       };
 
-      if (!options.expanded) {
-        const preview = lines.slice(0, 5).join("\n");
-        const truncated = lines.length > 5;
-        const moreInfo = truncated ? theme.fg("dim", `\n... ${lines.length - 5} more`) : "";
+      const PREVIEW_LINES = 8;
+      const totalLines = lines.length;
+      const truncated = totalLines > PREVIEW_LINES;
+
+      if (!options.expanded && truncated) {
+        const preview = lines.slice(0, PREVIEW_LINES).join("\n");
+        const hiddenCount = totalLines - PREVIEW_LINES;
         return new Text(
-          `${icon} ${theme.fg("muted", details?.action || "")}${moreInfo}\n${formatOutput(preview)}`,
+          `${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(preview)}\n${theme.fg("dim", `... ${hiddenCount} more lines (ctrl+o to expand)`)}`,
           0,
           0,
         );
       }
 
-      return new Text(`${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(text)}`, 0, 0);
+      const expandHint = truncated ? theme.fg("dim", "\n(ctrl+o to collapse)") : "";
+      return new Text(`${icon} ${theme.fg("muted", details?.action || "")}\n${formatOutput(text)}${expandHint}`, 0, 0);
     },
   });
 
