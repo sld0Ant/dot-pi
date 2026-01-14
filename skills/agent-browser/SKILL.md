@@ -134,6 +134,29 @@ agent-browser snapshot -i --json
 agent-browser get text @e1 --json
 ```
 
+## Control user's real browser via Playwriter
+
+Connect to user's actual Chrome browser using the [Playwriter extension](https://chromewebstore.google.com/detail/playwriter-mcp/jfeammnjpkecdekppnclgkkffahnhfhe).
+
+### Setup (one-time)
+
+1. User installs [Playwriter extension](https://chromewebstore.google.com/detail/playwriter-mcp/jfeammnjpkecdekppnclgkkffahnhfhe)
+2. User starts the relay: `bunx playwriter serve`
+3. User clicks Playwriter icon on tabs to control (icon turns green)
+
+### Usage
+
+Add `--cdp 19988` to all commands:
+
+```bash
+agent-browser --cdp 19988 snapshot -i
+agent-browser --cdp 19988 fill @e5 "search query"
+agent-browser --cdp 19988 click @e3
+agent-browser --cdp 19988 press Enter
+```
+
+**Note:** With CDP connection, `open` navigates the existing tab, and `close` only disconnects (doesn't close user's browser).
+
 ## Debugging
 
 ```bash
