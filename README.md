@@ -23,6 +23,7 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 | `agent-browser`           | Browser automation with [agent-browser](https://github.com/vercel-labs/agent-browser) CLI |
 | `chat-to-skill`           | Convert current chat session into a reusable skill (long-term memory) |
 | `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English)      |
+| `skill-discovery`         | Discover agent skills on GitHub via `gh` CLI                          |
 
 ## Rules
 
