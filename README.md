@@ -40,6 +40,7 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 | `commit-messages.md` | Follow existing repo commit style                                       |
 | `delete-files.md`    | Use `rm -f` to delete files                                             |
 | `pull-requests.md`   | PR workflow: study templates, check user's style, preview before submit |
+| `ripgrep.md`         | Prefer `rg` over `grep`                                                 |
 | `typescript.md`      | TypeScript naming, type safety, imports, async patterns                 |
 
 ## Installation
@@ -52,7 +53,7 @@ Copy desired extensions to `~/.pi/agent/extensions/`:
 cp extensions/codesearch.ts ~/.pi/agent/extensions/
 ```
 
-For extensions with dependencies (`sandbox/`, `webfetch/`), copy the whole directory and run `bun install`:
+For extensions with dependencies (`env-json/`, `sandbox/`, `webfetch/`), copy the whole directory and run `bun install`:
 
 ```bash
 cp -r extensions/webfetch ~/.pi/agent/extensions/
