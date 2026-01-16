@@ -20,7 +20,7 @@ import { spawnSync } from "child_process";
 import { type Dirent, readdirSync, statSync } from "fs";
 import { delimiter, extname, join } from "path";
 
-import { bashCompletionScript } from "./bash-completion-script.ts";
+import { bashCompletionScript } from "./bash-completion-script.js";
 
 /**
  * Extended autocomplete provider that adds bash completion support for shell commands.
@@ -280,8 +280,8 @@ class BashCompletionEditor extends CustomEditor {
 	private bashProvider: BashCompletionAutocompleteProvider | null = null;
 	private shellPath: string;
 
-	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager, shellPath: string = "bash") {
-		super(tui, theme, keybindings);
+	constructor(_tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager, shellPath: string = "bash") {
+		super(theme, keybindings);
 		this.shellPath = shellPath;
 	}
 
