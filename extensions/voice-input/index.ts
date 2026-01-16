@@ -2,7 +2,7 @@
  * Voice Input Extension
  *
  * Press Ctrl+R to record audio, which is transcribed via ElevenLabs
- * and sent as a user message to the agent.
+ * in real-time and sent as a user message to the agent.
  *
  * Requires:
  * - ELEVENLABS_API_KEY in env
@@ -12,12 +12,10 @@
  * - ELEVENLABS_LANGUAGE - ISO-639-1/3 language code (e.g., "en", "ru", "de")
  */
 
-import { CustomEditor, type ExtensionAPI, type ExtensionContext, type KeybindingsManager, type Theme } from "@mariozechner/pi-coding-agent";
-import { type EditorTheme, Key, Loader, matchesKey, type TUI } from "@mariozechner/pi-tui";
+import { CustomEditor, type ExtensionAPI, type KeybindingsManager, type Theme } from "@mariozechner/pi-coding-agent";
+import { type EditorTheme, Key, matchesKey, type TUI } from "@mariozechner/pi-tui";
 import { spawnSync, spawn, type ChildProcess } from "child_process";
-import { unlinkSync, readFileSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import WebSocket from "ws";
 
 function getApiKey(): string | undefined {
 	return process.env.ELEVENLABS_API_KEY;
@@ -27,80 +25,61 @@ function getLanguageCode(): string | undefined {
 	return process.env.ELEVENLABS_LANGUAGE;
 }
 
-interface TranscriptionResponse {
-	text: string;
-	language_code?: string;
-}
-
-async function transcribeAudio(audioPath: string): Promise<string> {
-	const apiKey = getApiKey();
-	if (!apiKey) {
-		throw new Error("ELEVENLABS_API_KEY not set");
-	}
-
-	const audioData = readFileSync(audioPath);
-	const formData = new FormData();
-	formData.append("model_id", "scribe_v1");
-	formData.append("file", new Blob([audioData]), "recording.wav");
-
-	const languageCode = getLanguageCode();
-	if (languageCode) {
-		formData.append("language_code", languageCode);
-	}
-
-	const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
-		method: "POST",
-		headers: {
-			"xi-api-key": apiKey,
-		},
-		body: formData,
-	});
-
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(`ElevenLabs API error: ${response.status} ${error}`);
-	}
-
-	const result = (await response.json()) as TranscriptionResponse;
-	return result.text;
-}
-
 function checkRecAvailable(): boolean {
 	const result = spawnSync("which", ["rec"], { encoding: "utf-8" });
 	return result.status === 0;
 }
 
-function startRecording(outputPath: string): ChildProcess {
-	const proc = spawn("rec", ["-q", "-c", "1", "-r", "16000", "-b", "16", outputPath], {
-		stdio: ["ignore", "ignore", "ignore"],
-	});
-	return proc;
-}
-
 // Shared recording state
 let isRecording = false;
 let recordingProc: ChildProcess | null = null;
-let audioPath: string | null = null;
+let ws: WebSocket | null = null;
+let currentTranscript = "";
 let blinkInterval: NodeJS.Timeout | null = null;
 let blinkState = true;
 let onSubmit: (() => void) | null = null;
 let onCancel: (() => void) | null = null;
 let setStatusFn: ((text: string | undefined) => void) | null = null;
-let setWidgetFn: ExtensionContext["ui"]["setWidget"] | null = null;
+let setEditorTextFn: ((text: string) => void) | null = null;
+let getEditorTextFn: (() => string) | null = null;
 let currentTheme: Theme | null = null;
+let prefixText = "";
+let onPause: (() => void) | null = null;
+let recordingStartTime = 0;
 
-function updateStatus() {
+function formatTime(ms: number): string {
+	const totalSeconds = Math.floor(ms / 1000);
+	const minutes = Math.floor(totalSeconds / 60);
+	const seconds = totalSeconds % 60;
+	return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function updateStatusIndicator() {
 	if (!setStatusFn || !currentTheme) return;
 	const circle = blinkState ? currentTheme.fg("error", "●") : currentTheme.fg("muted", "○");
-	setStatusFn(`${circle} Rec (⏎ send, esc cancel)`);
+	const elapsed = formatTime(Date.now() - recordingStartTime);
+	const hints = [
+		currentTheme.fg("dim", "⏎") + currentTheme.fg("muted", " send"),
+		currentTheme.fg("dim", "space") + currentTheme.fg("muted", " stop"),
+		currentTheme.fg("dim", "esc") + currentTheme.fg("muted", " cancel"),
+	].join(currentTheme.fg("muted", ", "));
+	setStatusFn(`${circle} ${currentTheme.fg("muted", elapsed)} ${hints}`);
+}
+
+function updateEditorText() {
+	if (!setEditorTextFn || !currentTranscript) return;
+	
+	const separator = prefixText && !prefixText.endsWith(" ") ? " " : "";
+	const fullText = prefixText + separator + currentTranscript;
+	setEditorTextFn(fullText);
 }
 
 function startBlinking() {
 	blinkState = true;
-	updateStatus();
+	updateStatusIndicator();
 	blinkInterval = setInterval(() => {
 		blinkState = !blinkState;
-		updateStatus();
+		updateStatusIndicator();
 	}, 500);
 }
 
@@ -109,10 +88,6 @@ function stopBlinking() {
 		clearInterval(blinkInterval);
 		blinkInterval = null;
 	}
-	clearStatus();
-}
-
-function clearStatus() {
 	setStatusFn?.(undefined);
 }
 
@@ -120,8 +95,9 @@ function clearStatus() {
  * Custom editor that intercepts Enter/Escape during voice recording.
  */
 class VoiceInputEditor extends CustomEditor {
-	constructor(_tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) {
-		super(theme, keybindings);
+	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) {
+		// @ts-expect-error - dev version requires tui, published version doesn't
+		super(tui, theme, keybindings);
 	}
 
 	handleInput(data: string): void {
@@ -136,13 +112,202 @@ class VoiceInputEditor extends CustomEditor {
 				onCancel?.();
 				return;
 			}
+			// Space: stop recording, keep text for editing
+			if (data === " ") {
+				onPause?.();
+				return;
+			}
 			// Ignore other input while recording
 			return;
 		}
 
-		// Not recording - pass to parent
+		// Not recording - pass to parent for editing
 		super.handleInput(data);
 	}
+}
+
+interface RealtimeMessage {
+	message_type: string;
+	text?: string;
+	session_id?: string;
+	error?: string;
+}
+
+function startRealtimeRecording(
+	onTranscript: (text: string, isFinal: boolean) => void,
+	onError: (error: string) => void,
+): void {
+	const apiKey = getApiKey();
+	if (!apiKey) {
+		onError("ELEVENLABS_API_KEY not set");
+		return;
+	}
+
+	currentTranscript = "";
+
+	// Build WebSocket URL with query params
+	const params = new URLSearchParams({
+		model_id: "scribe_v2_realtime",
+		sample_rate: "16000",
+		audio_format: "pcm_16000",
+	});
+
+	const languageCode = getLanguageCode();
+	if (languageCode) {
+		params.set("language_code", languageCode);
+	}
+
+	const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?${params.toString()}`;
+
+	ws = new WebSocket(wsUrl, {
+		headers: {
+			"xi-api-key": apiKey,
+		},
+	});
+
+	ws.on("open", () => {
+		// Start timer
+		recordingStartTime = Date.now();
+		
+		// Start recording and pipe to WebSocket
+		// Use shell: false and detached to prevent terminal interference
+		recordingProc = spawn("rec", ["-q", "-c", "1", "-r", "16000", "-b", "16", "-e", "signed-integer", "-t", "raw", "-"], {
+			stdio: ["ignore", "pipe", "pipe"],
+			detached: true,
+		});
+		
+		// Prevent stderr from affecting terminal
+		recordingProc.stderr?.on("data", () => {});
+
+		// Save existing text as prefix
+		prefixText = getEditorTextFn?.() || "";
+		
+		// Workaround: setting initial text fixes cursor positioning bug when editor is empty
+		// Show placeholder while waiting for transcription
+		if (!prefixText) {
+			setEditorTextFn?.("Say something...");
+		}
+		
+		isRecording = true;
+		startBlinking();
+
+		recordingProc.stdout?.on("data", (chunk: Buffer) => {
+			if (ws?.readyState === WebSocket.OPEN) {
+				// Send audio chunk as base64
+				ws.send(JSON.stringify({
+					message_type: "input_audio_chunk",
+					audio_base_64: chunk.toString("base64"),
+				}));
+			}
+		});
+
+		recordingProc.on("error", (err) => {
+			onError(`Recording error: ${err.message}`);
+			cleanup();
+		});
+
+		recordingProc.on("close", () => {
+			// Recording stopped - no need to send commit, VAD handles it
+		});
+	});
+
+	ws.on("message", (data) => {
+		try {
+			const msg = JSON.parse(String(data)) as RealtimeMessage;
+
+			if (msg.message_type === "partial_transcript" && msg.text) {
+				currentTranscript = msg.text.trim();
+				onTranscript(currentTranscript, false);
+				updateEditorText();
+			} else if (msg.message_type === "committed_transcript" && msg.text) {
+				currentTranscript = msg.text.trim();
+				onTranscript(currentTranscript, true);
+				updateEditorText();
+			} else if (msg.message_type === "error" && msg.error) {
+				onError(msg.error);
+			}
+		} catch {
+			// Ignore parse errors
+		}
+	});
+
+	ws.on("error", (err) => {
+		onError(`WebSocket error: ${err.message}`);
+		cleanup();
+	});
+
+	ws.on("close", () => {
+		// WebSocket closed
+	});
+}
+
+function cleanup() {
+	if (recordingProc) {
+		recordingProc.kill("SIGTERM");
+		recordingProc = null;
+	}
+	if (ws) {
+		ws.close();
+		ws = null;
+	}
+	isRecording = false;
+	stopBlinking();
+}
+
+function stopRecording(): string {
+	const transcript = currentTranscript;
+
+	if (recordingProc) {
+		recordingProc.kill("SIGTERM");
+		recordingProc = null;
+	}
+
+	// Give WebSocket a moment to receive final transcript
+	setTimeout(() => {
+		if (ws) {
+			ws.close();
+			ws = null;
+		}
+	}, 500);
+
+	isRecording = false;
+	stopBlinking();
+	currentTranscript = "";
+	
+	// Clear editor after stopping
+	setEditorTextFn?.("");
+
+	return transcript;
+}
+
+function cancelRecording() {
+	cleanup();
+	currentTranscript = "";
+	// Restore original text
+	setEditorTextFn?.(prefixText);
+	prefixText = "";
+}
+
+function pauseRecording() {
+	// Stop recording but keep the text for editing
+	if (recordingProc) {
+		recordingProc.kill("SIGTERM");
+		recordingProc = null;
+	}
+	if (ws) {
+		ws.close();
+		ws = null;
+	}
+	
+	isRecording = false;
+	stopBlinking();
+	
+	// Add space at the end (user pressed space to stop)
+	const currentText = getEditorTextFn?.() || "";
+	setEditorTextFn?.(currentText + " ");
+	
+	// Clear status - user is now in normal editing mode
+	setStatusFn?.(undefined);
 }
 
 export default function (pi: ExtensionAPI) {
@@ -165,92 +330,37 @@ export default function (pi: ExtensionAPI) {
 			return new VoiceInputEditor(tui, theme, keybindings);
 		});
 
-		// Store status setter, widget setter and theme
+		// Store status setter, editor text getter/setter, and theme
 		setStatusFn = (text) => ctx.ui.setStatus("voice", text);
-		setWidgetFn = ctx.ui.setWidget.bind(ctx.ui);
+		setEditorTextFn = (text) => ctx.ui.setEditorText(text);
+		getEditorTextFn = () => ctx.ui.getEditorText();
 		currentTheme = ctx.ui.theme;
 	});
 
-	let transcribeLoader: Loader | null = null;
-
-	function startTranscribeLoader(message: string) {
-		setWidgetFn?.("voice", (tui, theme) => {
-			transcribeLoader = new Loader(
-				tui,
-				(s) => theme.fg("accent", s),
-				(t) => theme.fg("muted", t),
-				message,
-			);
-			return transcribeLoader;
-		});
-	}
-
-	function stopTranscribeLoader() {
-		transcribeLoader?.stop();
-		transcribeLoader = null;
-		setWidgetFn?.("voice", undefined);
-	}
-
-	async function stopAndTranscribe(): Promise<string | null> {
-		if (!recordingProc || !audioPath) return null;
-
-		const path = audioPath;
-		recordingProc.kill("SIGTERM");
-		recordingProc = null;
-		audioPath = null;
-		isRecording = false;
-		stopBlinking();
-
-		startTranscribeLoader("Transcribing...");
-
-		await new Promise((r) => setTimeout(r, 300));
-
-		try {
-			const text = await transcribeAudio(path);
-			return text;
-		} finally {
-			try { unlinkSync(path); } catch {}
-			stopTranscribeLoader();
-		}
-	}
-
-	function cancelRecording() {
-		if (recordingProc) {
-			recordingProc.kill("SIGTERM");
-			recordingProc = null;
-		}
-		if (audioPath) {
-			try { unlinkSync(audioPath); } catch {}
-			audioPath = null;
-		}
-		isRecording = false;
-		stopBlinking();
-		clearStatus();
-	}
-
-	function startNewRecording(notifyFn: (msg: string, type: "error" | "warning") => void) {
-		audioPath = join(tmpdir(), `pi-voice-${Date.now()}.wav`);
-		recordingProc = startRecording(audioPath);
-		isRecording = true;
-
-		recordingProc.on("error", (err) => {
-			notifyFn(`Recording error: ${err.message}`, "error");
-			cancelRecording();
-		});
-
-		startBlinking();
-	}
-
 	// Set up callbacks
-	onSubmit = async () => {
-		const text = await stopAndTranscribe();
-		if (text?.trim()) {
-			pi.sendUserMessage(text.trim());
+	onSubmit = () => {
+		// Get current text from editor (includes prefix + transcript)
+		const fullText = (getEditorTextFn?.() || "").trim();
+		
+		// Clean up
+		if (isRecording) {
+			stopRecording();
+		}
+		prefixText = "";
+		currentTranscript = "";
+		setEditorTextFn?.("");
+		
+		if (fullText) {
+			pi.sendUserMessage(fullText);
 		}
 	};
 
 	onCancel = () => {
 		cancelRecording();
+	};
+	
+	onPause = () => {
+		pauseRecording();
 	};
 
 	// Ctrl+R: start recording (or submit if already recording)
@@ -265,15 +375,23 @@ export default function (pi: ExtensionAPI) {
 
 			if (isRecording) {
 				// Submit
-				const text = await stopAndTranscribe();
+				const text = stopRecording();
 				if (text?.trim()) {
 					pi.sendUserMessage(text.trim());
 				} else {
 					ctx.ui.notify("No speech detected", "warning");
 				}
 			} else {
-				// Start recording
-				startNewRecording((msg, type) => ctx.ui.notify(msg, type));
+				// Start realtime recording
+				startRealtimeRecording(
+					(_text, _isFinal) => {
+						// Transcript updated - status already updates via updateStatus()
+					},
+					(error) => {
+						ctx.ui.notify(error, "error");
+						cleanup();
+					},
+				);
 			}
 		},
 	});
