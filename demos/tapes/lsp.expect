@@ -1,5 +1,5 @@
 #!/usr/bin/expect -f
-set timeout 60
+set timeout 90
 set env(PI_SKIP_VERSION_CHECK) 1
 
 proc type_slow {text {delay 40}} {
@@ -9,14 +9,14 @@ proc type_slow {text {delay 40}} {
     }
 }
 
-spawn asciinema rec --overwrite --idle-time-limit 2 --window-size 80x24 -c pi recordings/webfetch.cast
+spawn asciinema rec --overwrite --idle-time-limit 2 --window-size 80x24 -c pi recordings/lsp.cast
 
 expect "Sandbox"
 
-type_slow "fetch https://bun.sh and tell me what Bun is"
+type_slow "go to definition of parseChangelog in interactive-mode.ts"
 send "\r"
 
-sleep 25
+sleep 30
 
 send "\x03"
 sleep 0.3

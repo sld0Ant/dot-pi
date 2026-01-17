@@ -27,8 +27,10 @@ expect tapes/codesearch.expect
 | Tape                | Description                                       |
 | ------------------- | ------------------------------------------------- |
 | `codesearch.expect` | Search GitHub code for useEffect cleanup patterns |
-| `websearch.expect`  | Search the web for Bun 1.3 features               |
+| `lsp.expect`        | Go to definition using LSP extension              |
+| `question.expect`   | Interactive question with selectable options      |
 | `webfetch.expect`   | Fetch and summarize bun.sh                        |
+| `websearch.expect`  | Search the web for Bun 1.3 features               |
 
 ## Playback
 
@@ -37,6 +39,14 @@ asciinema play recordings/codesearch.cast
 ```
 
 ## Upload
+
+Upload all recordings:
+
+```bash
+./upload-all.sh
+```
+
+Or upload a single recording:
 
 ```bash
 asciinema upload recordings/codesearch.cast

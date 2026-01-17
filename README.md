@@ -2,6 +2,28 @@
 
 Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) coding agent.
 
+## Demos
+
+### Code Search
+
+[![codesearch](https://asciinema.org/a/HsHEscCk5Fq7s6Ym.svg)](https://asciinema.org/a/HsHEscCk5Fq7s6Ym)
+
+### LSP
+
+[![lsp](https://asciinema.org/a/0cG65zf3s94wFSdt.svg)](https://asciinema.org/a/0cG65zf3s94wFSdt)
+
+### Question
+
+[![question](https://asciinema.org/a/E48GyE7AE3FRuk6U.svg)](https://asciinema.org/a/E48GyE7AE3FRuk6U)
+
+### Web Fetch
+
+[![webfetch](https://asciinema.org/a/9oRM5g9BHrv00GnD.svg)](https://asciinema.org/a/9oRM5g9BHrv00GnD)
+
+### Web Search
+
+[![websearch](https://asciinema.org/a/sGYYlpmWipo8UKbs.svg)](https://asciinema.org/a/sGYYlpmWipo8UKbs)
+
 ## Extensions
 
 | Extension                | Description                                                                                                                        | Origin                                                                                                                                           |
