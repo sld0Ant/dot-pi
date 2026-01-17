@@ -5,6 +5,8 @@ description: Automates browser interactions for web testing, form filling, scree
 
 # Browser Automation with agent-browser
 
+> **Note:** Use `bunx @dannote/agent-browser` instead of `agent-browser` for latest features (screenshot refs, get styles).
+
 ## Quick start
 
 ```bash
@@ -67,6 +69,8 @@ agent-browser get text @e1        # Get element text
 agent-browser get value @e1       # Get input value
 agent-browser get title           # Get page title
 agent-browser get url             # Get current URL
+agent-browser get styles @e1      # Get computed styles
+agent-browser get styles "button" # Get styles for all buttons
 ```
 
 ### Screenshots
@@ -75,6 +79,7 @@ agent-browser get url             # Get current URL
 agent-browser screenshot          # Screenshot to stdout
 agent-browser screenshot path.png # Save to file
 agent-browser screenshot --full   # Full page
+agent-browser screenshot @e1      # Screenshot specific element
 ```
 
 ### Wait
