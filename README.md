@@ -10,7 +10,7 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 | **Question** | **Web Fetch** |
 | <a href="https://asciinema.org/a/E48GyE7AE3FRuk6U"><img src="https://asciinema.org/a/E48GyE7AE3FRuk6U.svg" width="400"></a> | <a href="https://asciinema.org/a/9oRM5g9BHrv00GnD"><img src="https://asciinema.org/a/9oRM5g9BHrv00GnD.svg" width="400"></a> |
 | **Web Search** | **Voice Input** |
-| <a href="https://asciinema.org/a/sGYYlpmWipo8UKbs"><img src="https://asciinema.org/a/sGYYlpmWipo8UKbs.svg" width="400"></a> | <a href="https://asciinema.org/a/holUXauSMlm8tnP6"><img src="https://asciinema.org/a/holUXauSMlm8tnP6.svg" width="400"></a> |
+| <a href="https://asciinema.org/a/EPAESVHwuQOqyfB3"><img src="https://asciinema.org/a/EPAESVHwuQOqyfB3.svg" width="400"></a> | <a href="https://asciinema.org/a/holUXauSMlm8tnP6"><img src="https://asciinema.org/a/holUXauSMlm8tnP6.svg" width="400"></a> |
 
 ## Extensions
 

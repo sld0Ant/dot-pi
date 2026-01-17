@@ -9,6 +9,7 @@ import {
   type ExtensionAPI,
   getLanguageFromPath,
   highlightCode,
+  type Theme,
 } from "@mariozechner/pi-coding-agent";
 import { Container, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
@@ -156,6 +157,12 @@ function formatResultsAsText(results: SearchResult[]): string {
       return `Repository: ${r.repo}\nPath: ${r.path}\nURL: ${r.url}\nLicense: ${r.license}\n\n${snippetsText}`;
     })
     .join("\n\n---\n\n");
+}
+
+// TODO: Import keyHint from pi-coding-agent when merged
+// https://github.com/badlogic/pi-mono/pull/802
+function keyHint(theme: Theme, key: string, description: string): string {
+  return theme.fg("dim", key) + theme.fg("muted", ` ${description}`);
 }
 
 export default function (pi: ExtensionAPI) {
@@ -370,15 +377,9 @@ export default function (pi: ExtensionAPI) {
       const totalSnippets = results.reduce((sum, r) => sum + r.snippets.length, 0);
 
       if (!expanded && (hiddenResults > 0 || totalSnippets > maxResults)) {
+        const more = `${hiddenResults} more repos, ${totalSnippets - maxResults} more snippets`;
         container.addChild(
-          new Text(
-            theme.fg(
-              "dim",
-              `\n... ${hiddenResults} more repos, ${totalSnippets - maxResults} more snippets`,
-            ),
-            0,
-            0,
-          ),
+          new Text(theme.fg("dim", `\n... ${more}, `) + keyHint(theme, "ctrl+o", "to expand"), 0, 0),
         );
       }
 

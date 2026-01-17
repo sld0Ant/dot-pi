@@ -5,7 +5,7 @@
  * Provides real-time web search with configurable crawling modes.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, type Theme } from "@mariozechner/pi-coding-agent";
 import { Container, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 
@@ -17,9 +17,6 @@ const API_CONFIG = {
   DEFAULT_NUM_RESULTS: 8,
   DEFAULT_TIMEOUT: 25000,
 } as const;
-
-const PREVIEW_RESULTS = 2;
-const PREVIEW_TEXT_LENGTH = 200;
 
 interface McpSearchRequest {
   jsonrpc: string;
@@ -98,34 +95,88 @@ const WebSearchParamsSchema = Type.Object({
   ),
 });
 
+// TODO: Import keyHint from pi-coding-agent when merged
+// https://github.com/badlogic/pi-mono/pull/802
+function keyHint(theme: Theme, key: string, description: string): string {
+  return theme.fg("dim", key) + theme.fg("muted", ` ${description}`);
+}
+
+const PREVIEW_TEXT_LENGTH = 200;
+const PREVIEW_RESULTS = 2;
+
+const FIELD_PATTERN = /^(Title|Published Date|Author|URL|Text):\s*(.*)$/;
+
 /**
- * Parse the raw API response text into structured results
+ * Parse Exa API response into structured results.
+ * State machine handles multiline Text fields that may contain field-like patterns.
  */
 function parseResults(rawText: string): SearchResult[] {
   const results: SearchResult[] = [];
-  // Split by "Title:" to get individual results
-  const chunks = rawText.split(/(?=^Title:)/m).filter(Boolean);
+  
+  let record: Partial<SearchResult> = {};
+  let field: string | null = null;
+  let value: string[] = [];
+  let inText = false;
 
-  for (const chunk of chunks) {
-    const titleMatch = chunk.match(/^Title:\s*(.+)$/m);
-    const urlMatch = chunk.match(/^URL:\s*(.+)$/m);
-    const authorMatch = chunk.match(/^Author:\s*(.+)$/m);
-    const dateMatch = chunk.match(/^Published Date:\s*(.+)$/m);
-    const textMatch = chunk.match(/^Text:\s*([\s\S]+)$/m);
+  const flush = () => {
+    if (field) {
+      const text = value.join("\n").trim();
+      if (field === "Title") record.title = text;
+      else if (field === "URL") record.url = text;
+      else if (field === "Author") record.author = text || undefined;
+      else if (field === "Published Date") record.date = text;
+      else if (field === "Text") record.text = text;
+    }
+  };
 
-    const title = titleMatch?.[1]?.trim();
-    const url = urlMatch?.[1]?.trim();
-    if (!title || !url) continue;
+  const emit = () => {
+    flush();
+    if (record.title && record.url) {
+      results.push({
+        title: record.title,
+        url: record.url,
+        author: record.author,
+        date: record.date,
+        text: record.text ?? "",
+      });
+    }
+    record = {};
+    field = null;
+    value = [];
+    inText = false;
+  };
 
-    results.push({
-      title,
-      url,
-      author: authorMatch?.[1]?.trim(),
-      date: dateMatch?.[1]?.trim(),
-      text: textMatch?.[1]?.trim() ?? "",
-    });
+  for (const line of rawText.split("\n")) {
+    const match = line.match(FIELD_PATTERN);
+
+    if (!match) {
+      if (field) value.push(line);
+      continue;
+    }
+
+    const [, name, rest] = match;
+
+    if (name === "Title") {
+      if (inText) emit();
+      else flush();
+      field = name;
+      value = [rest || ""];
+      inText = false;
+    } else if (name === "Text") {
+      flush();
+      field = name;
+      value = [rest || ""];
+      inText = true;
+    } else if (!inText) {
+      flush();
+      field = name;
+      value = [rest || ""];
+    } else {
+      value.push(line);
+    }
   }
 
+  emit();
   return results;
 }
 
@@ -141,19 +192,6 @@ function formatResultsAsText(results: SearchResult[]): string {
       return `${header}\n\n${r.text}`;
     })
     .join("\n\n---\n\n");
-}
-
-/**
- * Format a date string nicely
- */
-function formatDate(dateStr: string): string {
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  } catch {
-    return dateStr;
-  }
 }
 
 export default function (pi: ExtensionAPI) {
@@ -296,42 +334,52 @@ export default function (pi: ExtensionAPI) {
         new Text(theme.fg("success", "✓ ") + theme.fg("muted", `${results.length} results`), 0, 0),
       );
 
-      // Determine how many results to show
+      // Show results
       const maxResults = expanded ? results.length : Math.min(PREVIEW_RESULTS, results.length);
 
       for (let i = 0; i < maxResults; i++) {
         const r = results[i];
         if (!r) continue;
 
-        // Result header: title + metadata
-        let header = "\n" + theme.fg("accent", r.title);
-        const meta: string[] = [];
-        if (r.author) meta.push(r.author);
-        if (r.date) meta.push(formatDate(r.date));
-        if (meta.length > 0) {
-          header += theme.fg("dim", ` · ${meta.join(" · ")}`);
-        }
-        container.addChild(new Text(header, 0, 0));
+        // Title
+        container.addChild(new Text("\n" + theme.fg("dim", theme.bold(r.title)), 0, 0));
 
-        // URL
-        container.addChild(new Text(theme.fg("muted", r.url), 0, 0));
+        // URL + metadata
+        let meta = theme.fg("dim", theme.underline(r.url));
+        if (r.author) meta += theme.fg("dim", ` · ${r.author}`);
+        if (r.date) meta += theme.fg("dim", ` · ${r.date.split("T")[0]}`);
+        container.addChild(new Text(meta, 0, 0));
 
-        // Text preview/full
+        // Text body (truncated when collapsed)
         if (r.text) {
-          const displayText = expanded
-            ? r.text
-            : r.text.length > PREVIEW_TEXT_LENGTH
-              ? r.text.slice(0, PREVIEW_TEXT_LENGTH) + "..."
-              : r.text;
-          container.addChild(new Text(theme.fg("dim", displayText), 0, 0));
+          if (expanded) {
+            container.addChild(new Text(theme.fg("dim", r.text), 0, 0));
+          } else if (r.text.length > PREVIEW_TEXT_LENGTH) {
+            // Show hint on all truncated results except the last visible one
+            const isLastVisible = i === maxResults - 1;
+            const truncated = r.text.slice(0, PREVIEW_TEXT_LENGTH) + "...";
+            if (isLastVisible) {
+              container.addChild(new Text(theme.fg("dim", truncated), 0, 0));
+            } else {
+              container.addChild(new Text(theme.fg("dim", r.text.slice(0, PREVIEW_TEXT_LENGTH)), 0, 0));
+              container.addChild(new Text(theme.fg("dim", "\n... ") + keyHint(theme, "ctrl+o", "to expand"), 0, 0));
+            }
+          } else {
+            container.addChild(new Text(theme.fg("dim", r.text), 0, 0));
+          }
         }
       }
 
-      // Footer showing hidden count
+      // Footer with hint
       const hiddenResults = results.length - maxResults;
-
       if (!expanded && hiddenResults > 0) {
-        container.addChild(new Text(theme.fg("dim", `\n... ${hiddenResults} more results`), 0, 0));
+        container.addChild(
+          new Text(theme.fg("dim", `\n... ${hiddenResults} more results, `) + keyHint(theme, "ctrl+o", "to expand"), 0, 0),
+        );
+      } else if (!expanded && results.some(r => r.text.length > PREVIEW_TEXT_LENGTH)) {
+        container.addChild(
+          new Text(theme.fg("dim", "\n") + keyHint(theme, "ctrl+o", "to expand"), 0, 0),
+        );
       }
 
       return container;
