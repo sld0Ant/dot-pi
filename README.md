@@ -4,25 +4,14 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 
 ## Demos
 
-### Code Search
-
-[![codesearch](https://asciinema.org/a/HsHEscCk5Fq7s6Ym.svg)](https://asciinema.org/a/HsHEscCk5Fq7s6Ym)
-
-### LSP
-
-[![lsp](https://asciinema.org/a/0cG65zf3s94wFSdt.svg)](https://asciinema.org/a/0cG65zf3s94wFSdt)
-
-### Question
-
-[![question](https://asciinema.org/a/E48GyE7AE3FRuk6U.svg)](https://asciinema.org/a/E48GyE7AE3FRuk6U)
-
-### Web Fetch
-
-[![webfetch](https://asciinema.org/a/9oRM5g9BHrv00GnD.svg)](https://asciinema.org/a/9oRM5g9BHrv00GnD)
-
-### Web Search
-
-[![websearch](https://asciinema.org/a/sGYYlpmWipo8UKbs.svg)](https://asciinema.org/a/sGYYlpmWipo8UKbs)
+| | |
+|---|---|
+| **Code Search** | **LSP** |
+| <a href="https://asciinema.org/a/HsHEscCk5Fq7s6Ym"><img src="https://asciinema.org/a/HsHEscCk5Fq7s6Ym.svg" width="400"></a> | <a href="https://asciinema.org/a/0cG65zf3s94wFSdt"><img src="https://asciinema.org/a/0cG65zf3s94wFSdt.svg" width="400"></a> |
+| **Question** | **Web Fetch** |
+| <a href="https://asciinema.org/a/E48GyE7AE3FRuk6U"><img src="https://asciinema.org/a/E48GyE7AE3FRuk6U.svg" width="400"></a> | <a href="https://asciinema.org/a/9oRM5g9BHrv00GnD"><img src="https://asciinema.org/a/9oRM5g9BHrv00GnD.svg" width="400"></a> |
+| **Web Search** | |
+| <a href="https://asciinema.org/a/sGYYlpmWipo8UKbs"><img src="https://asciinema.org/a/sGYYlpmWipo8UKbs.svg" width="400"></a> | |
 
 ## Extensions
 
