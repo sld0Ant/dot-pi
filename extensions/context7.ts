@@ -15,12 +15,12 @@ const API_BASE = "https://context7.com/api";
 
 interface Library {
   id: string;
-  name: string;
+  title: string;
   description?: string;
-  source?: string;
-  sourceReputation?: string;
-  codeSnippets?: number;
+  totalSnippets?: number;
+  trustScore?: number;
   benchmarkScore?: number;
+  stars?: number;
 }
 
 interface SearchResult {
@@ -54,7 +54,9 @@ async function searchLibrary(
   }
 
   const data = await response.json();
-  return { libraries: data as Library[] };
+  // API returns { results: [...] }
+  const results = (data as { results?: Library[] }).results || [];
+  return { libraries: results };
 }
 
 async function getContext(
@@ -62,8 +64,10 @@ async function getContext(
   query: string,
   libraryId: string,
 ): Promise<DocsResult> {
-  const params = new URLSearchParams({ query, libraryId, type: "txt" });
-  const response = await fetch(`${API_BASE}/v1/context?${params}`, {
+  // Remove leading slash if present (API expects "org/repo" not "/org/repo")
+  const cleanId = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
+  const params = new URLSearchParams({ query, libraryId: cleanId, type: "txt" });
+  const response = await fetch(`${API_BASE}/v2/context?${params}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 
@@ -136,10 +140,14 @@ export default function (pi: ExtensionAPI) {
       }
 
       const lines = result.libraries.slice(0, 5).map((lib) => {
-        const parts = [`${lib.id} - ${lib.name}`];
+        const parts = [`${lib.id} — ${lib.title}`];
         if (lib.description) parts.push(`  ${lib.description}`);
-        if (lib.sourceReputation) parts.push(`  Reputation: ${lib.sourceReputation}`);
-        if (lib.codeSnippets) parts.push(`  Code snippets: ${lib.codeSnippets}`);
+        const meta: string[] = [];
+        if (lib.trustScore) meta.push(`trust: ${lib.trustScore}`);
+        if (lib.benchmarkScore) meta.push(`benchmark: ${lib.benchmarkScore}`);
+        if (lib.totalSnippets) meta.push(`snippets: ${lib.totalSnippets}`);
+        if (lib.stars && lib.stars > 0) meta.push(`★${lib.stars}`);
+        if (meta.length) parts.push(`  ${meta.join(" | ")}`);
         return parts.join("\n");
       });
 
