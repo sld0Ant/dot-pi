@@ -210,6 +210,36 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_start", (_event, ctx) => updateStatus(ctx));
   pi.on("turn_end", (_event, ctx) => updateStatus(ctx));
 
+  pi.registerCommand("kill", {
+    description: "Stop a background process",
+    getArgumentCompletions(prefix) {
+      const running = listProcesses().filter((p) => p.running);
+      if (running.length === 0) return null;
+      const filtered = prefix
+        ? running.filter((p) => p.name.toLowerCase().startsWith(prefix.toLowerCase()))
+        : running;
+      return filtered.map((p) => ({
+        value: p.name,
+        label: p.name,
+        description: `PID ${p.pid}`,
+      }));
+    },
+    async handler(args, ctx) {
+      const name = args.trim();
+      if (!name) {
+        ctx.ui.notify("Usage: /kill <process-name>", "info");
+        return;
+      }
+      try {
+        stopProcess(name);
+        updateStatus(ctx);
+        ctx.ui.notify(`Stopped "${name}"`, "info");
+      } catch (err) {
+        ctx.ui.notify(err instanceof Error ? err.message : String(err), "error");
+      }
+    },
+  });
+
   pi.registerTool({
     name: "background-start",
     label: "Start Background",
