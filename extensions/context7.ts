@@ -7,8 +7,8 @@
  * Requires CONTEXT7_API_KEY environment variable.
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { type ExtensionAPI, rawKeyHint } from "@mariozechner/pi-coding-agent";
+import { Container, Text } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 
 const API_BASE = "https://context7.com/api";
@@ -172,24 +172,38 @@ export default function (pi: ExtensionAPI) {
       );
     },
 
-    renderResult(result, _options, theme) {
+    renderResult(result, { expanded }, theme) {
       const details = result.details as { libraries?: Library[]; error?: boolean };
       if (details.error) {
         const text = result.content[0];
         return new Text(theme.fg("error", text?.type === "text" ? text.text : "Error"), 0, 0);
       }
-      const count = details.libraries?.length ?? 0;
-      if (count === 0) {
+      const libraries = details.libraries ?? [];
+      if (libraries.length === 0) {
         return new Text(theme.fg("warning", "No libraries found"), 0, 0);
       }
-      const first = details.libraries![0];
-      return new Text(
-        theme.fg("success", "✓ ") +
-          theme.fg("accent", first.id) +
-          theme.fg("dim", ` +${count - 1} more`),
-        0,
-        0,
+
+      const container = new Container();
+      container.addChild(
+        new Text(theme.fg("success", "✓ ") + theme.fg("muted", `${libraries.length} libraries`), 0, 0),
       );
+
+      const maxItems = expanded ? libraries.length : 1;
+      for (let i = 0; i < maxItems; i++) {
+        const lib = libraries[i];
+        container.addChild(new Text("\n" + theme.fg("accent", lib.id) + theme.fg("dim", ` — ${lib.title}`), 0, 0));
+        if (expanded && lib.description) {
+          container.addChild(new Text(theme.fg("muted", `  ${lib.description}`), 0, 0));
+        }
+      }
+
+      if (!expanded && libraries.length > 1) {
+        container.addChild(
+          new Text(theme.fg("dim", `\n... +${libraries.length - 1} more, `) + rawKeyHint("ctrl+o", "to expand"), 0, 0),
+        );
+      }
+
+      return container;
     },
   });
 
