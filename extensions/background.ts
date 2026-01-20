@@ -2,7 +2,7 @@
  * Background Process Manager
  *
  * Start, stop, and monitor long-running processes (dev servers, watchers) without blocking.
- * Processes are tracked with PIDs in /tmp/pi-bg-*.pid, logs in /tmp/pi-bg-*.log.
+ * Processes are scoped to projects (cwd) and tracked in /tmp/pi-bg-<project>-<name>.pid|log
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
@@ -35,20 +35,32 @@ interface LogsDetails {
   error?: boolean;
 }
 
-function listProcesses(): ProcessInfo[] {
+function encodeProject(cwd: string): string {
+  return cwd.replace(/\//g, "-").replace(/^-/, "");
+}
+
+function getFilePrefix(projectDir: string, name: string): string {
+  const project = encodeProject(projectDir);
+  return path.join(LOGS_DIR, `${PID_PREFIX}${project}-${name}`);
+}
+
+function listProcesses(projectDir: string): ProcessInfo[] {
+  const project = encodeProject(projectDir);
+  const prefix = `${PID_PREFIX}${project}-`;
+  
   let pidFiles: string[];
   try {
     pidFiles = fs
       .readdirSync(LOGS_DIR)
-      .filter((f) => f.startsWith(PID_PREFIX) && f.endsWith(".pid"));
+      .filter((f) => f.startsWith(prefix) && f.endsWith(".pid"));
   } catch {
     return [];
   }
 
   return pidFiles.map((file) => {
-    const name = file.slice(PID_PREFIX.length, -4);
+    const name = file.slice(prefix.length, -4);
     const pidFile = path.join(LOGS_DIR, file);
-    const logFile = path.join(LOGS_DIR, `${PID_PREFIX}${name}.log`);
+    const logFile = path.join(LOGS_DIR, `${prefix}${name}.log`);
 
     let pid = 0;
     let running = false;
@@ -65,11 +77,12 @@ function listProcesses(): ProcessInfo[] {
   });
 }
 
-function startProcess(name: string, command: string, cwd?: string): ProcessInfo {
-  const pidFile = path.join(LOGS_DIR, `${PID_PREFIX}${name}.pid`);
-  const logFile = path.join(LOGS_DIR, `${PID_PREFIX}${name}.log`);
+function startProcess(projectDir: string, name: string, command: string, cwd?: string): ProcessInfo {
+  const filePrefix = getFilePrefix(projectDir, name);
+  const pidFile = `${filePrefix}.pid`;
+  const logFile = `${filePrefix}.log`;
 
-  const existing = listProcesses().find((p) => p.name === name && p.running);
+  const existing = listProcesses(projectDir).find((p) => p.name === name && p.running);
   if (existing) {
     throw new Error(`Process "${name}" already running (PID ${existing.pid})`);
   }
@@ -77,7 +90,7 @@ function startProcess(name: string, command: string, cwd?: string): ProcessInfo 
   const logFd = fs.openSync(logFile, "w");
 
   const child = spawn("bash", ["-c", command], {
-    cwd: cwd || process.cwd(),
+    cwd: cwd || projectDir,
     detached: true,
     stdio: ["ignore", logFd, logFd],
   });
@@ -94,8 +107,9 @@ function startProcess(name: string, command: string, cwd?: string): ProcessInfo 
   return { name, pid, running: true, logFile };
 }
 
-function stopProcess(name: string): void {
-  const pidFile = path.join(LOGS_DIR, `${PID_PREFIX}${name}.pid`);
+function stopProcess(projectDir: string, name: string): void {
+  const filePrefix = getFilePrefix(projectDir, name);
+  const pidFile = `${filePrefix}.pid`;
 
   if (!fs.existsSync(pidFile)) {
     throw new Error(`Process "${name}" not found`);
@@ -112,8 +126,9 @@ function stopProcess(name: string): void {
   fs.unlinkSync(pidFile);
 }
 
-function readLogs(name: string, lines: number): string {
-  const logFile = path.join(LOGS_DIR, `${PID_PREFIX}${name}.log`);
+function readLogs(projectDir: string, name: string, lines: number): string {
+  const filePrefix = getFilePrefix(projectDir, name);
+  const logFile = `${filePrefix}.log`;
 
   if (!fs.existsSync(logFile)) {
     throw new Error(`Log file for "${name}" not found`);
@@ -162,7 +177,7 @@ function getListeningPorts(pid: number): number[] {
 }
 
 function updateStatus(ctx: ExtensionContext) {
-  const running = listProcesses().filter((p) => p.running);
+  const running = listProcesses(ctx.cwd).filter((p) => p.running);
   if (running.length === 0) {
     ctx.ui.setStatus("background", undefined);
     ctx.ui.setWidget("background-logs", undefined);
@@ -177,7 +192,6 @@ function updateStatus(ctx: ExtensionContext) {
     }).join(" ");
     ctx.ui.setStatus("background", theme.fg("success", "●") + " " + items);
 
-    // Show last few lines of logs from all running processes
     ctx.ui.setWidget(
       "background-logs",
       (_tui, theme) => {
@@ -185,7 +199,7 @@ function updateStatus(ctx: ExtensionContext) {
         container.addChild(new DynamicBorder((s) => theme.fg("border", s)));
         for (const proc of running) {
           try {
-            const logs = readLogs(proc.name, 2);
+            const logs = readLogs(ctx.cwd, proc.name, 2);
             container.addChild(new Text(theme.fg("muted", ` ${proc.name} `), 0, 0));
             if (logs.trim()) {
               for (const line of logs.trim().split("\n")) {
@@ -213,7 +227,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("kill", {
     description: "Stop a background process",
     getArgumentCompletions(prefix) {
-      const running = listProcesses().filter((p) => p.running);
+      const running = listProcesses(process.cwd()).filter((p) => p.running);
       if (running.length === 0) return null;
       const filtered = prefix
         ? running.filter((p) => p.name.toLowerCase().startsWith(prefix.toLowerCase()))
@@ -231,7 +245,7 @@ export default function (pi: ExtensionAPI) {
         return;
       }
       try {
-        stopProcess(name);
+        stopProcess(ctx.cwd, name);
         updateStatus(ctx);
         ctx.ui.notify(`Stopped "${name}"`, "info");
       } catch (err) {
@@ -262,7 +276,7 @@ export default function (pi: ExtensionAPI) {
 
     async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
-        const info = startProcess(params.name, params.command, params.cwd);
+        const info = startProcess(ctx.cwd, params.name, params.command, params.cwd);
         updateStatus(ctx);
         return {
           content: [
@@ -335,7 +349,7 @@ export default function (pi: ExtensionAPI) {
 
     async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
-        stopProcess(params.name);
+        stopProcess(ctx.cwd, params.name);
         updateStatus(ctx);
         return {
           content: [{ type: "text" as const, text: `Stopped "${params.name}"` }],
@@ -383,8 +397,8 @@ export default function (pi: ExtensionAPI) {
       "List all background processes and their status. Use to see what's currently running.",
     parameters: Type.Object({}),
 
-    async execute() {
-      const processes = listProcesses();
+    async execute(_toolCallId, _params, _onUpdate, ctx) {
+      const processes = listProcesses(ctx.cwd);
 
       if (processes.length === 0) {
         return {
@@ -441,9 +455,9 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
-        const logs = readLogs(params.name, params.lines ?? 50);
+        const logs = readLogs(ctx.cwd, params.name, params.lines ?? 50);
         return {
           content: [{ type: "text" as const, text: logs }],
           details: { name: params.name, logs } as LogsDetails,
