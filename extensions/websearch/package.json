@@ -1,0 +1,11 @@
+{
+  "name": "websearch",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "latest",
+    "@mariozechner/pi-tui": "latest",
+    "@sinclair/typebox": "^0.34.33",
+    "exa-js": "^1.4.12"
+  }
+}
