@@ -85,7 +85,7 @@ async function getContext(
 
 const RESOLVE_DESCRIPTION = `Find the Context7 library ID for a package/framework.
 
-Call this FIRST before using context7Docs to get the correct library ID.
+Call this FIRST before using context7-docs to get the correct library ID.
 
 Examples:
 - libraryName: "react", query: "hooks" → finds /reactjs/react.dev
@@ -99,7 +99,7 @@ Returns matching libraries ranked by relevance. Pick the best match based on:
 
 const DOCS_DESCRIPTION = `Get up-to-date documentation for a library from Context7.
 
-You MUST call context7Resolve first to get the libraryId.
+You MUST call context7-resolve first to get the libraryId.
 
 Examples:
 - libraryId: "/vercel/next.js", query: "app router"
@@ -110,7 +110,7 @@ Returns relevant documentation snippets with code examples.`;
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
-    name: "context7Resolve",
+    name: "context7-resolve",
     label: "Context7 Resolve",
     description: RESOLVE_DESCRIPTION,
     parameters: Type.Object({
@@ -164,7 +164,7 @@ export default function (pi: ExtensionAPI) {
     renderCall(params, theme) {
       const { libraryName, query } = params as { libraryName: string; query: string };
       return new Text(
-        theme.fg("toolTitle", theme.bold("context7Resolve ")) +
+        theme.fg("toolTitle", theme.bold("context7-resolve ")) +
           theme.fg("accent", libraryName) +
           theme.fg("dim", ` "${query}"`),
         0,
@@ -208,7 +208,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerTool({
-    name: "context7Docs",
+    name: "context7-docs",
     label: "Context7 Docs",
     description: DOCS_DESCRIPTION,
     parameters: Type.Object({
@@ -250,7 +250,7 @@ export default function (pi: ExtensionAPI) {
     renderCall(params, theme) {
       const { libraryId, query } = params as { libraryId: string; query: string };
       return new Text(
-        theme.fg("toolTitle", theme.bold("context7Docs ")) +
+        theme.fg("toolTitle", theme.bold("context7-docs ")) +
           theme.fg("accent", libraryId) +
           theme.fg("dim", ` "${query}"`),
         0,
