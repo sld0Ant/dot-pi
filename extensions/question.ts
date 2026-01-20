@@ -29,29 +29,18 @@ interface QuestionDetails {
   wasCustom?: boolean;
 }
 
-// Support both simple strings and objects with descriptions
-const OptionSchema = Type.Union([
-  Type.String(),
-  Type.Object({
-    label: Type.String({ description: "Display label for the option" }),
-    description: Type.Optional(
-      Type.String({ description: "Optional description shown below label" }),
-    ),
-  }),
-]);
+// Options with labels and optional descriptions
+const OptionSchema = Type.Object({
+  label: Type.String({ description: "Display label for the option" }),
+  description: Type.Optional(
+    Type.String({ description: "Optional description shown below label" }),
+  ),
+});
 
 const QuestionParams = Type.Object({
   question: Type.String({ description: "The question to ask the user" }),
   options: Type.Array(OptionSchema, { description: "Options for the user to choose from" }),
 });
-
-// Normalize option to { label, description? }
-function normalizeOption(opt: string | { label: string; description?: string }): OptionWithDesc {
-  if (typeof opt === "string") {
-    return { label: opt };
-  }
-  return opt;
-}
 
 export default function question(pi: ExtensionAPI) {
   pi.registerTool({
@@ -69,7 +58,7 @@ export default function question(pi: ExtensionAPI) {
           ],
           details: {
             question: params.question,
-            options: params.options.map((o) => (typeof o === "string" ? o : o.label)),
+            options: params.options.map((o) => o.label),
             answer: null,
           } as QuestionDetails,
         };
@@ -82,10 +71,8 @@ export default function question(pi: ExtensionAPI) {
         };
       }
 
-      // Normalize options
-      const normalizedOptions = params.options.map(normalizeOption);
       const allOptions: DisplayOption[] = [
-        ...normalizedOptions,
+        ...params.options,
         { label: "Type something.", isOther: true },
       ];
 
@@ -108,7 +95,7 @@ export default function question(pi: ExtensionAPI) {
             noMatch: (t) => theme.fg("warning", t),
           },
         };
-        const editor = new Editor(editorTheme);
+        const editor = new Editor(tui, editorTheme);
 
         editor.onSubmit = (value) => {
           const trimmed = value.trim();
@@ -226,7 +213,7 @@ export default function question(pi: ExtensionAPI) {
       });
 
       // Build simple options list for details
-      const simpleOptions = normalizedOptions.map((o) => o.label);
+      const simpleOptions = params.options.map((o) => o.label);
 
       if (!result) {
         return {
@@ -265,9 +252,7 @@ export default function question(pi: ExtensionAPI) {
       let text = theme.fg("toolTitle", theme.bold("question ")) + theme.fg("muted", args.question);
       const opts = Array.isArray(args.options) ? args.options : [];
       if (opts.length) {
-        const labels = opts.map((o: string | { label: string }) =>
-          typeof o === "string" ? o : o.label,
-        );
+        const labels = opts.map((o: OptionWithDesc) => o.label);
         const numbered = [...labels, "Type something."].map((o, i) => `${i + 1}. ${o}`);
         text += `\n${theme.fg("dim", `  Options: ${numbered.join(", ")}`)}`;
       }
