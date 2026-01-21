@@ -54,7 +54,11 @@ export default function (pi: ExtensionAPI) {
         : undefined;
 
     if (stopReason === "error") {
-      notify("Pi", "Error occurred");
+      const errorMessage =
+        lastMessage && "errorMessage" in lastMessage
+          ? (lastMessage as { errorMessage?: string }).errorMessage
+          : undefined;
+      notify("Pi Error", errorMessage || "Unknown error");
       return;
     }
 
