@@ -84,7 +84,7 @@ export default function (pi: ExtensionAPI) {
     description: DESCRIPTION,
     parameters: FetchParamsSchema as any,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const { url, format = "markdown", timeout: timeoutSec } = params as FetchParams;
 
       // Validate URL

@@ -433,7 +433,7 @@ export default function (pi: ExtensionAPI) {
     description: DESCRIPTION,
     parameters: lspSchema,
 
-    async execute(_toolCallId, params: LspParams, onUpdate) {
+    async execute(_toolCallId, params: LspParams, _signal, onUpdate) {
       const {
         action,
         file,

@@ -122,7 +122,7 @@ export default function (pi: ExtensionAPI) {
       query: Type.String({ description: "What you're trying to do (helps rank results)" }),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const apiKey = getApiKey();
       if (!apiKey) {
         return {
@@ -220,7 +220,7 @@ export default function (pi: ExtensionAPI) {
       query: Type.String({ description: "What you want to learn about" }),
     }),
 
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, _signal, _onUpdate) {
       const apiKey = getApiKey();
       if (!apiKey) {
         return {

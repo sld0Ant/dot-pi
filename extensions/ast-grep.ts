@@ -43,7 +43,7 @@ export default function (pi: ExtensionAPI) {
       path: Type.Optional(Type.String({ description: "Path to search (default: current directory)" })),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const { pattern, lang, path } = params as { pattern: string; lang?: string; path?: string };
 
       const args = ["run", "-p", pattern, "--color=never"];
@@ -92,7 +92,7 @@ export default function (pi: ExtensionAPI) {
       dryRun: Type.Optional(Type.Boolean({ description: "Preview changes without applying (default: false)" })),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx, signal) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const { pattern, replacement, lang, path, dryRun } = params as {
         pattern: string;
         replacement: string;

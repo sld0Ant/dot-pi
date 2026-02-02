@@ -187,7 +187,7 @@ Project setup (npm/bun/cargo/etc.) runs automatically.`,
 			name: Type.String({ description: "Short name for the worktree (used as directory and branch name)" }),
 			baseBranch: Type.Optional(Type.String({ description: "Branch to base off (default: current HEAD)" })),
 		}),
-		async execute(_toolCallId, params, onUpdate, ctx, _signal) {
+		async execute(_toolCallId, params, _signal, onUpdate, ctx) {
 			const { name, baseBranch } = params;
 			const worktreePath = join(ctx.cwd, WORKTREES_DIR, name);
 
@@ -289,7 +289,7 @@ Project setup (npm/bun/cargo/etc.) runs automatically.`,
 		label: "List Worktrees",
 		description: "List all git worktrees in this repository, including the main working directory.",
 		parameters: Type.Object({}),
-		async execute(_toolCallId, _params, _onUpdate, ctx, _signal) {
+		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			const result = await pi.exec("git", ["worktree", "list", "--porcelain"], { cwd: ctx.cwd });
 
 			if (result.code !== 0) {
@@ -354,7 +354,7 @@ Use force=true to remove even with uncommitted changes.`,
 			name: Type.String({ description: "Worktree name to remove" }),
 			force: Type.Optional(Type.Boolean({ description: "Force removal even with uncommitted changes" })),
 		}),
-		async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const { name, force } = params;
 			const worktreePath = join(ctx.cwd, WORKTREES_DIR, name);
 
@@ -420,7 +420,7 @@ Use force=true to remove even with uncommitted changes.`,
 		parameters: Type.Object({
 			name: Type.String({ description: "Worktree name" }),
 		}),
-		async execute(_toolCallId, params, _onUpdate, ctx, _signal) {
+		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const { name } = params;
 			const worktreePath = join(ctx.cwd, WORKTREES_DIR, name);
 

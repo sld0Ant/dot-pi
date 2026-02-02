@@ -195,7 +195,7 @@ export default function (pi: ExtensionAPI) {
     description: DESCRIPTION,
     parameters: CodeSearchParamsSchema as any,
 
-    async execute(_toolCallId, params, onUpdate, _ctx, signal) {
+    async execute(_toolCallId, params, signal, onUpdate, _ctx) {
       const { query, regex, caseSensitive, wholeWords, repo, path, lang } =
         params as CodeSearchParams;
 

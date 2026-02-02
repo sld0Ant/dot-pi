@@ -416,7 +416,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
         const info = startProcess(ctx.cwd, params.name, params.command, params.cwd);
         updateStatus(ctx);
@@ -489,7 +489,7 @@ export default function (pi: ExtensionAPI) {
       }),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
         stopProcess(ctx.cwd, params.name);
         updateStatus(ctx);
@@ -539,7 +539,7 @@ export default function (pi: ExtensionAPI) {
       "List all background processes and their status. Use to see what's currently running.",
     parameters: Type.Object({}),
 
-    async execute(_toolCallId, _params, _onUpdate, ctx) {
+    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       const processes = listProcesses(ctx.cwd);
 
       if (processes.length === 0) {
@@ -599,7 +599,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
         const logs = readLogs(ctx.cwd, params.name, params.lines ?? 50);
         return {
