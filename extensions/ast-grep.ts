@@ -43,14 +43,14 @@ export default function (pi: ExtensionAPI) {
       path: Type.Optional(Type.String({ description: "Path to search (default: current directory)" })),
     }),
 
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const { pattern, lang, path } = params as { pattern: string; lang?: string; path?: string };
 
       const args = ["run", "-p", pattern, "--color=never"];
       if (lang) args.push("-l", lang);
       args.push(path || ".");
 
-      const result = await pi.exec("sg", args, { signal, cwd: ctx.cwd });
+      const result = await pi.exec("sg", args, { cwd: ctx.cwd });
 
       if (result.killed) {
         return { content: [{ type: "text", text: "Search cancelled" }], details: {} };
@@ -92,7 +92,7 @@ export default function (pi: ExtensionAPI) {
       dryRun: Type.Optional(Type.Boolean({ description: "Preview changes without applying (default: false)" })),
     }),
 
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const { pattern, replacement, lang, path, dryRun } = params as {
         pattern: string;
         replacement: string;
@@ -106,7 +106,7 @@ export default function (pi: ExtensionAPI) {
       if (!dryRun) args.push("-U"); // --update-all: apply changes in place
       args.push(path || ".");
 
-      const result = await pi.exec("sg", args, { signal, cwd: ctx.cwd });
+      const result = await pi.exec("sg", args, { cwd: ctx.cwd });
 
       if (result.killed) {
         return { content: [{ type: "text", text: "Rewrite cancelled" }], details: {} };
