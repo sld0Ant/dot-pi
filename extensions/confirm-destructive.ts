@@ -1,8 +1,10 @@
 /**
  * Confirm Destructive Actions Extension
  *
- * Prompts for confirmation before destructive session actions (clear, switch, branch).
- * Demonstrates how to cancel session events using the before_* events.
+ * Prompts for confirmation before:
+ * - Destructive session actions (clear, switch, branch)
+ * - Creating PRs/MRs and issues
+ * - Writing review comments
  */
 
 import type {
@@ -10,8 +12,40 @@ import type {
   SessionBeforeSwitchEvent,
   SessionMessageEntry,
 } from "@mariozechner/pi-coding-agent";
+import { isToolCallEventType } from "@mariozechner/pi-coding-agent";
+
+const DESTRUCTIVE_BASH_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /\bgh\s+pr\s+create\b/, label: "Create GitHub PR" },
+  { pattern: /\bgh\s+issue\s+create\b/, label: "Create GitHub issue" },
+  { pattern: /\bgh\s+pr\s+comment\b/, label: "Comment on GitHub PR" },
+  { pattern: /\bgh\s+issue\s+comment\b/, label: "Comment on GitHub issue" },
+  { pattern: /\bgh\s+pr\s+review\b/, label: "Submit GitHub PR review" },
+  { pattern: /\bglab\s+mr\s+create\b/, label: "Create GitLab MR" },
+  { pattern: /\bglab\s+issue\s+create\b/, label: "Create GitLab issue" },
+  { pattern: /\bglab\s+mr\s+note\b/, label: "Comment on GitLab MR" },
+  { pattern: /\bglab\s+issue\s+note\b/, label: "Comment on GitLab issue" },
+];
 
 export default function (pi: ExtensionAPI) {
+  pi.on("tool_call", async (event, ctx) => {
+    if (!ctx.hasUI) return;
+    if (!isToolCallEventType("bash", event)) return;
+
+    const command = event.input.command;
+    const match = DESTRUCTIVE_BASH_PATTERNS.find((p) => p.pattern.test(command));
+    if (!match) return;
+
+    const confirmed = await ctx.ui.confirm(
+      `${match.label}?`,
+      "Review the command before submitting.",
+    );
+
+    if (!confirmed) {
+      ctx.ui.notify(`${match.label} cancelled`, "info");
+      return { block: true, reason: `User cancelled: ${match.label}` };
+    }
+  });
+
   pi.on("session_before_switch", async (event: SessionBeforeSwitchEvent, ctx) => {
     if (!ctx.hasUI) return;
 
