@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "exa-js": "^1.4.12"
+  },
+  "devDependencies": {
     "@mariozechner/pi-coding-agent": "latest",
     "@mariozechner/pi-tui": "latest",
-    "@sinclair/typebox": "^0.34.33",
-    "exa-js": "^1.4.12"
+    "@sinclair/typebox": "^0.34.33"
   }
 }
