@@ -88,7 +88,7 @@ function listProcesses(projectDir: string): ProcessInfo[] {
       const logFile = path.join(dir, `${name}.log`);
       const metaFile = path.join(dir, `${name}.json`);
 
-      let meta: ProcessMeta;
+      let meta: ProcessMeta | undefined;
       try {
         meta = JSON.parse(fs.readFileSync(metaFile, "utf8"));
       } catch {
@@ -318,6 +318,45 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_start", (_event, ctx) => updateStatus(ctx));
   pi.on("turn_end", (_event, ctx) => updateStatus(ctx));
 
+  pi.on("before_agent_start", async (event) => {
+    const prompt = event.prompt.toLowerCase();
+    const devKeywords = ["run dev", "start server", "npm start", "bun run dev", "vite", "next dev", "запусти сервер", "подними сервер"];
+    const needsHint = devKeywords.some((kw) => prompt.includes(kw));
+    
+    if (needsHint) {
+      return {
+        systemPrompt: event.systemPrompt + "\n\nIMPORTANT: For dev servers and long-running processes, use `background-start` tool, NOT `bash`. The bash tool will hang on commands that don't exit (like `bun run dev`, `npm start`, `vite`, etc.).",
+      };
+    }
+  });
+
+  pi.on("tool_call", async (event) => {
+    if (event.toolName !== "bash") return;
+    
+    const cmd = event.input.command?.toLowerCase() || "";
+    const longRunningPatterns = [
+      /\b(bun|npm|yarn|pnpm)\s+run\s+(dev|start|serve|watch)\b/,
+      /\b(bun|npm|yarn|pnpm)\s+start\b/,
+      /\bnodemon\b/,
+      /\bvite\b(?!\s+build)/,
+      /\bnext\s+dev\b/,
+      /\btsc\s+--watch\b/,
+      /\bcargo\s+watch\b/,
+      /\bflask\s+run\b/,
+      /\buvicorn\b/,
+      /\bpython\s+-m\s+http\.server\b/,
+      /\bdocker\s+compose\s+up\b(?!\s+-d)/,
+    ];
+    
+    const isLongRunning = longRunningPatterns.some((p) => p.test(cmd));
+    if (isLongRunning) {
+      return {
+        block: true,
+        reason: `This command runs indefinitely. Use \`background-start\` tool instead of \`bash\` for: ${cmd}`,
+      };
+    }
+  });
+
   pi.registerCommand("kill", {
     description: "Stop a background process",
     getArgumentCompletions(prefix) {
@@ -399,8 +438,23 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "background-start",
     label: "Start Background",
-    description:
-      "Start a long-running process in background (dev server, watcher, etc.). Use ONLY when you need to run something that doesn't exit immediately. DO NOT use for regular commands - use bash instead.",
+    description: `Start a long-running background process that runs indefinitely until stopped.
+
+**MUST use for:**
+- Dev servers: \`bun run dev\`, \`npm run dev\`, \`npm start\`, \`vite\`, \`next dev\`, \`flask run\`, \`uvicorn\`
+- Watchers: \`tsc --watch\`, \`nodemon\`, \`cargo watch\`
+- Servers: \`node server.js\`, \`python -m http.server\`, \`php -S\`
+- Database/services: \`docker compose up\`, \`redis-server\`, \`postgres\`
+- Any command with \`--watch\`, \`--serve\`, or that starts a server
+
+**DO NOT use for (use bash instead):**
+- Build commands: \`bun run build\`, \`npm run build\`, \`cargo build\`
+- Tests: \`bun test\`, \`npm test\`, \`pytest\`
+- One-off scripts: \`node script.js\`, \`python script.py\`
+- File operations: \`ls\`, \`cat\`, \`grep\`, \`find\`
+- Git commands: \`git status\`, \`git commit\`
+
+**Rule of thumb:** If the command would hang in a terminal waiting for Ctrl+C, use background-start.`,
     parameters: Type.Object({
       name: Type.String({
         description:
@@ -416,7 +470,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
         const info = startProcess(ctx.cwd, params.name, params.command, params.cwd);
         updateStatus(ctx);
@@ -489,7 +543,7 @@ export default function (pi: ExtensionAPI) {
       }),
     }),
 
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
         stopProcess(ctx.cwd, params.name);
         updateStatus(ctx);
@@ -539,7 +593,7 @@ export default function (pi: ExtensionAPI) {
       "List all background processes and their status. Use to see what's currently running.",
     parameters: Type.Object({}),
 
-    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, _params, _onUpdate, ctx) {
       const processes = listProcesses(ctx.cwd);
 
       if (processes.length === 0) {
@@ -586,7 +640,7 @@ export default function (pi: ExtensionAPI) {
     name: "background-logs",
     label: "Background Logs",
     description:
-      "Read logs from a background process. Use to check output from a running dev server or watcher.",
+      "Read logs from a background process. Use to check output, errors, or status from a running dev server or watcher. Always check logs after starting a process to verify it started correctly.",
     parameters: Type.Object({
       name: Type.String({
         description: "Name of the process",
@@ -599,7 +653,7 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, _onUpdate, ctx) {
       try {
         const logs = readLogs(ctx.cwd, params.name, params.lines ?? 50);
         return {
