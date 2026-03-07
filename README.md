@@ -16,6 +16,8 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 
 ```bash
 pi install git:github.com/dannote/dot-pi
+pi install npm:pi-subagents   # optional: subagent delegation (scout, planner, worker, etc.)
+pi install npm:pi-context      # optional: agentic context window management
 ```
 
 Use `pi config` to enable/disable individual extensions and skills.
