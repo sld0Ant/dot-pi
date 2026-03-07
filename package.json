@@ -11,10 +11,9 @@
   "pi": {
     "extensions": [
       "extensions",
-      "!extensions/sandbox",
-      "!extensions/subagent",
-      "!extensions/plan-mode",
-      "!extensions/provider",
+      "!extensions/sandbox/**",
+      "!extensions/plan-mode/**",
+      "!extensions/provider/**",
       "!extensions/decision-guidance.ts"
     ],
     "skills": ["skills"]
