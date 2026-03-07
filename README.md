@@ -12,109 +12,97 @@ Extensions, skills, and rules for [Pi](https://github.com/badlogic/pi-mono) codi
 | **Web Search** | **Voice Input** |
 | <a href="https://asciinema.org/a/EPAESVHwuQOqyfB3"><img src="https://asciinema.org/a/EPAESVHwuQOqyfB3.svg" width="400"></a> | <a href="https://asciinema.org/a/holUXauSMlm8tnP6"><img src="https://asciinema.org/a/holUXauSMlm8tnP6.svg" width="400"></a> |
 
-## Extensions
-
-| Extension                | Description                                                                                                                        | Origin                                                                                                                                           |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ast-grep.ts`            | AST-based code search and rewrite using [ast-grep](https://ast-grep.github.io) (`brew install ast-grep`)                           | Original                                                                                                                                         |
-| `background.ts`          | Run long-running processes (dev servers, watchers) in background without blocking. List, stop, and read logs.                      | Original                                                                                                                                         |
-| `bash-completion/`       | Intelligent bash completions for `!`/`!!` shell commands (git, docker, npm, etc.)                                                  | Original                                                                                                                                         |
-| `codesearch.ts`          | Search public GitHub code via [grep.app](https://grep.app) MCP API                                                                 | Original                                                                                                                                         |
-| `decision-guidance.ts`   | Decision-time guidance: inject situational instructions based on trajectory analysis (doom loops, errors, stuck patterns)          | Based on [Replit blog](https://blog.replit.com/decision-time-guidance)                                                                           |
-| `context7/`              | Search up-to-date library documentation via [Context7](https://context7.com) API                                                   | Original                                                                                                                                         |
-| `confirm-destructive.ts` | Confirm before clearing session, switching with unsaved work, creating PRs/issues, or writing comments                             | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/confirm-destructive.ts)       |
-| `critic/`                | Shadow reviewer that evaluates agent output in isolated context and provides feedback                                              | Original                                                                                                                                         |
-| `env-json/`              | Load environment variables from `~/.pi/agent/env.jsonc` into bash commands                                                         | Original                                                                                                                                         |
-| `lsp/`                   | Language Server Protocol for code intelligence (definition, references, hover, diagnostics, rename, etc.)                          | Based on [oh-my-pi](https://github.com/can1357/oh-my-pi/tree/41fed50e5861cfa8bac505cf3eb238f55b228ae8/packages/coding-agent/src/core/tools/lsp)  |
-| `plan-mode/`             | Read-only plan mode toggle + safe bash allowlist + optional step tracking                                                          | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/plan-mode)                    |
-| `notify.ts`              | Send desktop notifications on task completion (OSC 777/9)                                                                          | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/notify.ts)                    |
-| `permission-gate.ts`     | Block dangerous bash commands (rm -rf, sudo, git push, etc.)                                                                       | Based on [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/permission-gate.ts)           |
-| `provider/`              | Dynamic provider registration from remote config endpoint                                                                          | Original                                                                                                                                         |
-| `question.ts`            | Let the LLM ask user questions with selectable options                                                                             | Simplified version of [pi-mono example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/question.ts)     |
-| `rules.ts`               | Load rule files from `~/.pi/agent/rules/` into system prompt                                                                       | Based on [pi-mono claude-rules example](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent/examples/extensions/claude-rules.ts) |
-| `sandbox/`               | **[WIP]** Sandbox bash commands using [@anthropic-ai/sandbox-runtime](https://www.npmjs.com/package/@anthropic-ai/sandbox-runtime) | Original                                                                                                                                         |
-| `webfetch/`              | Fetch URL content and convert to markdown/text/html                                                                                | Original                                                                                                                                         |
-| `voice-input/`           | Voice recording with ElevenLabs STT transcription (Ctrl+R to record)                                                               | Original                                                                                                                                         |
-| `websearch/`             | Web search via [Exa AI](https://exa.ai) SDK                                                                                        | Original                                                                                                                                         |
-
-## Skills
-
-| Skill                     | Description                                                                               | Origin                                                                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `agent-browser`           | Browser automation with [agent-browser](https://github.com/vercel-labs/agent-browser) CLI | Adapted from [agent-browser docs](https://github.com/vercel-labs/agent-browser)                                                |
-| `ai-news`                 | Curated AI news digest from X/Twitter list (releases, papers, insights)                   | Original                                                                                                                       |
-| `applescript`             | AppleScript and JXA automation for macOS                                                  | Adapted from [claude-skills-generator](https://github.com/martinholovsky/claude-skills-generator/tree/main/skills/applescript) |
-| `bird`                    | X/Twitter CLI for tweets, threads, search, news, and social graph                         | Adapted from [steipete/bird](https://github.com/steipete/bird)                                                                 |
-| `chat-to-skill`           | Convert current chat session into a reusable skill (long-term memory)                     | Original                                                                                                                       |
-| `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English)                          | Original                                                                                                                       |
-| `skill-discovery`         | Discover agent skills on GitHub via `gh` CLI                                              | Original                                                                                                                       |
-
-## Rules
-
-| Rule                 | Description                                                             |
-| -------------------- | ----------------------------------------------------------------------- |
-| `bun.md`             | Use Bun instead of Node.js/npm                                          |
-| `comments.md`        | Comment policy — avoid redundant comments                               |
-| `commit-messages.md` | Follow existing repo commit style                                       |
-| `delete-files.md`    | Use `rm -f` to delete files                                             |
-| `pull-requests.md`   | PR workflow: study templates, check user's style, preview before submit |
-| `ripgrep.md`         | Prefer `rg` over `grep`                                                 |
-| `typescript.md`      | TypeScript naming, type safety, imports, async patterns                 |
-
 ## Installation
-
-### As Pi Package (Recommended)
-
-Install as a pi package to get all extensions and skills:
 
 ```bash
 pi install git:github.com/dannote/dot-pi
 ```
 
-Or install for the current project only:
-
-```bash
-pi install -l git:github.com/dannote/dot-pi
-```
-
 Use `pi config` to enable/disable individual extensions and skills.
 
-### Manual Installation
+Some extensions require external tools or API keys:
 
-#### Extensions
+| Dependency | Required by |
+|---|---|
+| [ast-grep](https://ast-grep.github.io) (`brew install ast-grep`) | `ast-grep.ts` |
+| [Exa AI](https://exa.ai) API key (`EXA_API_KEY`) | `websearch/` |
+| [ElevenLabs](https://elevenlabs.io) API key (`ELEVENLABS_API_KEY`) | `voice-input/` |
 
-Create symlinks to desired extensions in `~/.pi/agent/extensions/`:
+## Extensions
 
-```bash
-ln -s /path/to/dot-pi/extensions/codesearch.ts ~/.pi/agent/extensions/
+| Extension | Description |
+|---|---|
+| `ast-grep.ts` | AST-based code search and rewrite |
+| `background.ts` | Run long-running processes in background |
+| `bash-completion/` | Intelligent bash completions for shell commands |
+| `codesearch.ts` | Search public GitHub code via [grep.app](https://grep.app) |
+| `context7/` | Search library documentation via [Context7](https://context7.com) |
+| `confirm-destructive.ts` | Confirm before destructive actions (clear session, create PRs/issues) |
+| `critic/` | Shadow reviewer that evaluates agent output |
+| `env-json/` | Load environment variables from `~/.pi/agent/env.jsonc` |
+| `lsp/` | Language Server Protocol (definition, references, hover, rename) |
+| `notify.ts` | Desktop notifications on task completion |
+| `permission-gate.ts` | Block dangerous bash commands |
+| `question.ts` | Let the LLM ask user questions with selectable options |
+| `rules.ts` | Load rule files from `~/.pi/agent/rules/` |
+| `voice-input/` | Voice recording with ElevenLabs STT (Ctrl+R) |
+| `webfetch/` | Fetch URL content and convert to markdown/text/html |
+| `websearch/` | Web search via [Exa AI](https://exa.ai) |
+| `worktrees/` | Git worktree management for parallel work |
+
+<details>
+<summary>Experimental extensions (not installed by default)</summary>
+
+| Extension | Description |
+|---|---|
+| `decision-guidance.ts` | Decision-time guidance based on trajectory analysis |
+| `plan-mode/` | Read-only plan mode toggle with step tracking |
+| `provider/` | Dynamic provider registration from remote config |
+| `sandbox/` | OS-level sandboxing for bash commands (WIP) |
+| `subagent/` | Subagent delegation (superseded by [pi-subagents](https://www.npmjs.com/package/pi-subagents)) |
+
+To enable an experimental extension:
+
+```json
+{
+  "source": "git:github.com/dannote/dot-pi",
+  "extensions": ["+extensions/plan-mode"]
+}
 ```
 
-#### Skills
+</details>
 
-Create symlinks to desired skills in `~/.pi/agent/skills/`:
+## Skills
 
-```bash
-ln -s /path/to/dot-pi/skills/chat-to-skill ~/.pi/agent/skills/
-```
+| Skill | Description |
+|---|---|
+| `agent-browser` | Browser automation with [agent-browser](https://github.com/vercel-labs/agent-browser) CLI |
+| `ai-news` | Curated AI news digest from X/Twitter list |
+| `applescript` | AppleScript and JXA automation for macOS |
+| `bird` | X/Twitter CLI for tweets, threads, search, and social graph |
+| `chat-to-skill` | Convert current chat session into a reusable skill |
+| `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English) |
+| `skill-discovery` | Discover agent skills on GitHub |
 
-#### Rules
+## Rules
 
-Rules are not distributed via packages. Create symlinks to desired rules in `~/.pi/agent/rules/`:
+Rules are not distributed via packages. Symlink desired rules into `~/.pi/agent/rules/`:
 
 ```bash
 ln -s /path/to/dot-pi/rules/typescript.md ~/.pi/agent/rules/
 ```
 
-Then add the `rules.ts` extension to load them into the system prompt.
-
-## Development
-
-```bash
-bun install
-bun run check    # TypeScript check
-bun run format   # Format with oxfmt
-bun run lint     # Lint with oxlint
-```
+| Rule | Description |
+|---|---|
+| `bun.md` | Use Bun instead of Node.js/npm |
+| `comments.md` | Avoid redundant comments |
+| `commit-messages.md` | Follow existing repo commit style |
+| `delete-files.md` | Use `rm -f` to delete files |
+| `git-hosting.md` | Use `gh`/`glab` CLI instead of fetching URLs |
+| `pull-requests.md` | PR workflow: study templates, preview before submit |
+| `ripgrep.md` | Prefer `rg` over `grep` |
+| `skills-cli.md` | Run skill commands from skill directory |
+| `typescript.md` | TypeScript naming, type safety, imports, async |
 
 ## License
 

@@ -9,7 +9,14 @@
     "lint": "oxlint ."
   },
   "pi": {
-    "extensions": ["extensions"],
+    "extensions": [
+      "extensions",
+      "!extensions/sandbox",
+      "!extensions/subagent",
+      "!extensions/plan-mode",
+      "!extensions/provider",
+      "!extensions/decision-guidance.ts"
+    ],
     "skills": ["skills"]
   },
   "dependencies": {
