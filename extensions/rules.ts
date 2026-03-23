@@ -3,6 +3,12 @@
  *
  * Scans ~/.pi/agent/rules/ for rule files and loads their content into the system prompt.
  * Rules are eagerly loaded for better adherence.
+ *
+ * Supports optional YAML frontmatter for filtering:
+ *   - `models:` glob pattern(s) matching "provider/model-id" (e.g. "openai-codex/*", "llm-proxy/claude-*")
+ *   - `paths:` (passthrough, handled by pi core)
+ *
+ * Rules without `models:` frontmatter apply to all models.
  */
 
 import * as fs from "node:fs";
@@ -10,23 +16,32 @@ import * as path from "node:path";
 import * as os from "node:os";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { parseFrontmatter } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
+import { minimatch } from "minimatch";
+
+type RuleFrontmatter = {
+  models?: string | string[];
+  [key: string]: unknown;
+};
 
 type RuleFile = {
   relativePath: string;
   fullPath: string;
   content: string;
+  frontmatter: RuleFrontmatter;
+  body: string;
 };
 
-/**
- * Recursively find all .md files in a directory and load their content
- */
+function matchesModel(patterns: string | string[], modelKey: string): boolean {
+  const list = Array.isArray(patterns) ? patterns : [patterns];
+  return list.some((p) => minimatch(modelKey, p));
+}
+
 function loadRuleFiles(dir: string, basePath: string = ""): RuleFile[] {
   const results: RuleFile[] = [];
 
-  if (!fs.existsSync(dir)) {
-    return results;
-  }
+  if (!fs.existsSync(dir)) return results;
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
@@ -52,7 +67,8 @@ function loadRuleFiles(dir: string, basePath: string = ""): RuleFile[] {
     } else if (isFile && entry.name.endsWith(".md")) {
       try {
         const content = fs.readFileSync(fullPath, "utf-8");
-        results.push({ relativePath, fullPath, content });
+        const { frontmatter, body } = parseFrontmatter<RuleFrontmatter>(content);
+        results.push({ relativePath, fullPath, content, frontmatter, body });
       } catch {
         // Skip files that can't be read
       }
@@ -69,10 +85,7 @@ type RulesMessageDetails = {
 };
 
 function isRulesListMessage(message: AgentMessage): boolean {
-  if (message.role !== "custom") {
-    return false;
-  }
-
+  if (message.role !== "custom") return false;
   return (message as { customType?: string }).customType === RULES_MESSAGE_TYPE;
 }
 
@@ -98,7 +111,6 @@ export default function rulesExtension(pi: ExtensionAPI) {
     };
   });
 
-  // Scan and load rules on session start
   pi.on("session_start", async (_event, ctx) => {
     ruleFiles = loadRuleFiles(rulesDir);
 
@@ -117,18 +129,24 @@ export default function rulesExtension(pi: ExtensionAPI) {
     }
   });
 
-  // Prepend rules content to system prompt (before AGENTS.md context)
-  pi.on("before_agent_start", async (event) => {
-    if (ruleFiles.length === 0) {
-      return;
-    }
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (ruleFiles.length === 0) return;
 
-    // Build rules content matching opencode/Claude Code format
-    const rulesContent = ruleFiles
-      .map((rule) => `Instructions from: ${rule.fullPath}\n${rule.content}`)
+    const model = ctx.model;
+    const modelKey = model ? `${model.provider}/${model.id}` : "";
+
+    const activeRules = ruleFiles.filter((rule) => {
+      if (!rule.frontmatter.models) return true;
+      if (!modelKey) return true;
+      return matchesModel(rule.frontmatter.models, modelKey);
+    });
+
+    if (activeRules.length === 0) return;
+
+    const rulesContent = activeRules
+      .map((rule) => `Instructions from: ${rule.fullPath}\n${rule.body}`)
       .join("\n\n");
 
-    // Prepend to system prompt so rules come before project context
     return {
       systemPrompt: `${rulesContent}
 
