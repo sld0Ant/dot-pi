@@ -83,6 +83,7 @@ To enable an experimental extension:
 | `applescript` | AppleScript and JXA automation for macOS |
 | `bird` | X/Twitter CLI for tweets, threads, search, and social graph |
 | `chat-to-skill` | Convert current chat session into a reusable skill |
+| `github-issues` | Work with GitHub Issues via `gh` CLI — view, triage, fix, close |
 | `keyboard-layout-decoder` | Decode text typed with wrong keyboard layout (Russian ↔ English) |
 | `skill-discovery` | Discover agent skills on GitHub |
 
