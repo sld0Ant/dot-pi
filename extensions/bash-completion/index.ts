@@ -35,11 +35,12 @@ class BashCompletionAutocompleteProvider implements AutocompleteProvider {
 		this.shellPath = shellPath;
 	}
 
-	getSuggestions(
+	async getSuggestions(
 		lines: string[],
 		cursorLine: number,
 		cursorCol: number,
-	): { items: AutocompleteItem[]; prefix: string } | null {
+		options: { signal: AbortSignal; force?: boolean },
+	): Promise<{ items: AutocompleteItem[]; prefix: string } | null> {
 		const currentLine = lines[cursorLine] || "";
 
 		// Check if we're in shell mode (! or !!)
@@ -52,7 +53,7 @@ class BashCompletionAutocompleteProvider implements AutocompleteProvider {
 		}
 
 		// Fall back to base provider for non-shell completions
-		return this.baseProvider.getSuggestions(lines, cursorLine, cursorCol);
+		return this.baseProvider.getSuggestions(lines, cursorLine, cursorCol, options);
 	}
 
 	applyCompletion(
