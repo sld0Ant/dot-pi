@@ -144,6 +144,12 @@
     "fileTypes": [".ml", ".mli", ".mll", ".mly"],
     "rootMarkers": ["dune-project", "dune-workspace", "*.opam"]
   },
+  "expert": {
+    "command": "expert",
+    "args": ["--stdio"],
+    "fileTypes": [".ex", ".exs", ".heex", ".eex"],
+    "rootMarkers": ["mix.exs", "mix.lock"]
+  },
   "elixirls": {
     "command": "elixir-ls",
     "args": [],
