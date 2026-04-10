@@ -45,8 +45,9 @@ interface LogsDetails {
 }
 
 function getProjectDir(projectDir: string): string {
-  const hash = crypto.createHash("sha256").update(projectDir).digest("hex").slice(0, 12);
-  const name = path.basename(projectDir);
+  const dir = projectDir || process.cwd();
+  const hash = crypto.createHash("sha256").update(dir).digest("hex").slice(0, 12);
+  const name = path.basename(dir);
   return path.join(BASE_DIR, `${name}-${hash}`);
 }
 
@@ -126,6 +127,7 @@ function listProcesses(projectDir: string): ProcessInfo[] {
 }
 
 function startProcess(projectDir: string, name: string, command: string, cwd?: string): ProcessInfo {
+  projectDir = projectDir || process.cwd();
   const dir = ensureProjectDir(projectDir);
   const pidFile = path.join(dir, `${name}.pid`);
   const logFile = path.join(dir, `${name}.log`);
@@ -334,6 +336,14 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_start", (_event, ctx) => updateStatus(ctx));
   pi.on("turn_end", (_event, ctx) => updateStatus(ctx));
 
+  pi.on("before_agent_start", async (event, _ctx) => {
+    return {
+      systemPrompt:
+        event.systemPrompt +
+        "\n\nIMPORTANT: When the user asks to run/start/launch anything in the background, start a dev server, run a watcher, or run any long-running command — you MUST use the background-start tool, NOT bash. background-start keeps the process running without blocking.",
+    };
+  });
+
   pi.registerCommand("kill", {
     description: "Stop a background process",
     getArgumentCompletions(prefix) {
@@ -416,7 +426,7 @@ export default function (pi: ExtensionAPI) {
     name: "background-start",
     label: "Start Background",
     description:
-      "Start a long-running process in background (dev server, watcher, etc.). Use ONLY when you need to run something that doesn't exit immediately. DO NOT use for regular commands - use bash instead.",
+      "Start a long-running process in background (dev server, watcher, etc.). Use ONLY when you need to run something that doesn't exit immediately. DO NOT use for regular commands - use bash instead. You MUST use this tool (not bash) whenever the user asks to: start/run/launch something in the background, start a dev server, run a watcher, or run any command that keeps running. Keywords: background, dev server, watcher, serve, run dev, start, launch.",
     parameters: Type.Object({
       name: Type.String({
         description:
